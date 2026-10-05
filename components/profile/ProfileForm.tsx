@@ -1,0 +1,100 @@
+"use client";
+import { useState } from "react";
+import type { ProfileInput, User } from "@/types/user";
+import { GENDER_LABELS } from "@/constants/app";
+import { authService } from "@/services/authService";
+import { Input, Select } from "@/components/common/Input";
+import { Button } from "@/components/common/Button";
+import { Alert } from "@/components/common/Feedback";
+import { errorMessage, today } from "@/utils/format";
+import { validContact, validPastDate } from "@/utils/validation";
+
+export function ProfileForm({ user }: { user: User }) {
+  const [form, setForm] = useState<ProfileInput>({
+    name: user.name,
+    email: user.email,
+    phone: user.phone,
+    birthDate: user.birthDate,
+    gender: user.gender,
+    occupation: user.occupation,
+  });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const change =
+    (key: keyof ProfileInput) =>
+    (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+      setForm({ ...form, [key]: event.target.value });
+      setSuccess(false);
+    };
+  return (
+    <form
+      className="stack"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        setBusy(true);
+        setError("");
+        try {
+          await authService.updateProfile(form);
+          setSuccess(true);
+        } catch (reason) {
+          setError(errorMessage(reason));
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      {error && <Alert>{error}</Alert>}
+      {success && <Alert tone="success">Đã cập nhật hồ sơ cá nhân.</Alert>}
+      <Input label="Họ và tên" required value={form.name} onChange={change("name")} />
+      <div className="form-grid">
+        <Input
+          label="Email"
+          type="email"
+          required={!form.phone}
+          value={form.email}
+          onChange={change("email")}
+        />
+        <Input
+          label="Số điện thoại"
+          type="tel"
+          required={!form.email}
+          value={form.phone}
+          onChange={change("phone")}
+        />
+        <Input
+          label="Ngày sinh"
+          type="date"
+          min="1900-01-01"
+          max={today()}
+          value={form.birthDate}
+          onChange={change("birthDate")}
+          error={
+            form.birthDate && !validPastDate(form.birthDate) ? "Ngày sinh không hợp lệ." : undefined
+          }
+        />
+        <Select label="Giới tính" value={form.gender} onChange={change("gender")}>
+          {Object.entries(GENDER_LABELS).map(([key, label]) => (
+            <option value={key} key={key}>
+              {label}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <Input label="Nghề nghiệp" value={form.occupation} onChange={change("occupation")} />
+      <div className="flex justify-end">
+        <Button
+          type="submit"
+          busy={busy}
+          disabled={
+            form.name.trim().length < 2 ||
+            !validContact(form.email, form.phone) ||
+            (!!form.birthDate && !validPastDate(form.birthDate))
+          }
+        >
+          Lưu thay đổi
+        </Button>
+      </div>
+    </form>
+  );
+}

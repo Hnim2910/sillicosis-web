@@ -1,0 +1,57 @@
+"use client";
+import { Fragment, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { Header } from "@/components/layout/Header";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { Modal } from "@/components/common/Modal";
+import { Loading } from "@/components/common/Loading";
+import { ErrorState } from "@/components/common/Feedback";
+import { useAuth } from "@/contexts/AuthContext";
+import { canAccessRoute } from "@/constants/navigation";
+
+export function MainLayout({ children }: { children: ReactNode }) {
+  const { user, loading, error, refresh } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!loading && !user && !error) router.replace("/login");
+  }, [loading, user, error, router]);
+  if (error) return <ErrorState message={error} retry={refresh} />;
+  if (loading || !user) return <Loading label="Đang mở không gian làm việc…" />;
+  return (
+    <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        Chuyển tới nội dung
+      </a>
+      <aside className="desktop-sidebar">
+        <Sidebar />
+      </aside>
+      <div className="workspace">
+        <Header onMenu={() => setMenuOpen(true)} />
+        <main id="main-content" className="main-content">
+          {canAccessRoute(pathname, user.role) ? (
+            <Fragment key={`${user.id}:${user.role}`}>{children}</Fragment>
+          ) : (
+            <div className="empty-state">
+              <h1>Bạn không có quyền truy cập</h1>
+              <p>Màn hình này không dành cho vai trò của bạn.</p>
+              <Link href="/dashboard" className="btn btn-primary">
+                Về tổng quan
+              </Link>
+            </div>
+          )}
+        </main>
+        <footer className="app-footer">
+          <span>SilicoCare · Hỗ trợ sàng lọc bụi phổi silic</span>
+          <span>Dữ liệu và kết quả minh họa</span>
+        </footer>
+      </div>
+      <Modal open={menuOpen} title="Điều hướng" onClose={() => setMenuOpen(false)}>
+        <Sidebar onNavigate={() => setMenuOpen(false)} />
+      </Modal>
+    </div>
+  );
+}

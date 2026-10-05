@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="640" viewBox="0 0 600 640">
+  <defs><radialGradient id="body"><stop stop-color="#a9bdc2" stop-opacity=".7"/><stop offset="1" stop-color="#3d555e" stop-opacity=".2"/></radialGradient><radialGradient id="lung"><stop stop-color="#182a32"/><stop offset="1" stop-color="#536970"/></radialGradient><filter id="blur"><feGaussianBlur stdDeviation="2"/></filter></defs>
+  <rect width="600" height="640" fill="#101d24"/>
+  <path d="M210 80Q190 115 145 127Q73 154 58 330L78 563Q300 620 522 563L542 330Q527 154 455 127Q410 115 390 80" fill="url(#body)"/>
+  <path d="M270 134Q208 91 143 200Q100 283 122 474Q153 534 262 481L275 290Z" fill="url(#lung)" stroke="#acc3c8" stroke-opacity=".35" stroke-width="4"/>
+  <path d="M330 134Q392 91 457 200Q500 283 478 474Q447 534 338 481L325 290Z" fill="url(#lung)" stroke="#acc3c8" stroke-opacity=".35" stroke-width="4"/>
+  <path d="M297 65L301 292M298 237L243 283M300 237L356 283" fill="none" stroke="#c2d1d1" stroke-opacity=".5" stroke-width="13" filter="url(#blur)"/>
+  <g stroke="#b8cdd0" stroke-opacity=".38" stroke-width="8" fill="none">
+    <path d="M279 162Q193 122 137 184M321 162Q407 122 463 184"/><path d="M276 205Q176 158 122 231M324 205Q424 158 478 231"/><path d="M275 252Q166 207 112 278M325 252Q434 207 488 278"/><path d="M273 301Q151 252 110 327M327 301Q449 252 490 327"/><path d="M270 353Q160 306 113 379M330 353Q440 306 487 379"/><path d="M268 407Q163 360 118 430M332 407Q437 360 482 430"/><path d="M266 460Q173 412 126 480M334 460Q427 412 474 480"/>
+  </g>
+  <path d="M280 315Q345 289 371 396Q380 472 296 484L269 440Z" fill="#95afb3" opacity=".4"/>
+  <g fill="none" stroke="#91afb5" stroke-width="3" opacity=".3"><path d="M248 281L186 349L173 419M199 334L154 331M211 322L215 395M352 281L414 349L427 419M401 334L446 331M389 322L385 395"/></g>
+  <text x="39" y="54" fill="#a8bdc4" font-size="22" font-family="Arial">R</text><text x="544" y="54" fill="#a8bdc4" font-size="22" font-family="Arial">L</text>
+  <rect x="93" y="573" width="414" height="32" rx="5" fill="#253d46"/>
+  <text x="300" y="594" fill="#bdd3d7" font-size="12" font-family="Arial" text-anchor="middle">MINH HỌA DEMO · KHÔNG PHẢI ẢNH CHẨN ĐOÁN</text>
+</svg>
