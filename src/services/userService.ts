@@ -9,7 +9,7 @@ export function validateAccount(database: MockDatabase, input: AccountInput, exc
     throw new Error("Vui lòng nhập họ tên, email và số điện thoại hợp lệ.");
   if ((!excludeId || input.password) && input.password.length < 8)
     throw new Error("Mật khẩu phải có ít nhất 8 ký tự.");
-  if (!(input.role in ROLE_LABELS)) throw new Error("Vai trò không hợp lệ.");
+  if (!(Object.hasOwn(ROLE_LABELS, input.role))) throw new Error("Vai trò không hợp lệ.");
   if (
     database.users.some(
       (user) =>

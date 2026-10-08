@@ -4,14 +4,7 @@ import type { Patient } from "@/types/patient";
 import { MODEL_VERSION } from "@/constants/app";
 
 export const demoAccounts: DemoAccount[] = [
-  { name: "Nguyễn Minh Anh", email: "doctor@silicosis.demo", password: "Demo@123", role: "doctor" },
   { name: "Trần Văn Hùng", email: "patient@silicosis.demo", password: "Demo@123", role: "patient" },
-  {
-    name: "Lê Thu Hà",
-    email: "technician@silicosis.demo",
-    password: "Demo@123",
-    role: "technician",
-  },
   { name: "Phạm Hoàng Nam", email: "admin@silicosis.demo", password: "Demo@123", role: "admin" },
 ];
 
@@ -109,16 +102,16 @@ export function createMockDatabase(): MockDatabase {
       },
     ],
   }));
-  const users: User[] = demoAccounts.map((account, index) => ({
-    id: `user-${index + 1}`,
+  const users: User[] = demoAccounts.map((account) => ({
+    id: account.role === "patient" ? "user-2" : "user-4",
     name: account.name,
     email: account.email,
-    phone: `091234567${index}`,
+    phone: account.role === "patient" ? "0912345671" : "0912345673",
     role: account.role,
     active: true,
     patientId: account.role === "patient" ? patients[0].id : undefined,
     birthDate: account.role === "patient" ? patients[0].birthDate : "1988-04-16",
-    gender: account.role === "doctor" || account.role === "technician" ? "female" : "male",
+    gender: "male",
     occupation: account.role === "patient" ? patients[0].occupation : "Nhân viên y tế",
   }));
   return {
@@ -133,7 +126,7 @@ export function createMockDatabase(): MockDatabase {
       label: index % 3 === 0 ? "Silicosis" : "Normal",
       confidence: [93.6, 96.2, 91.8, 88.4, 97.1, 94.3, 90.5, 95.7][index],
       modelVersion: MODEL_VERSION,
-      performedBy: users[0].name,
+      performedBy: patients[index % patients.length].name,
       image: {
         name: `xray-demo-${index + 1}.svg`,
         url: "/images/xray-demo.svg",
@@ -144,16 +137,6 @@ export function createMockDatabase(): MockDatabase {
       clinicalRecords: structuredClone(patients[index % patients.length].clinicalRecords),
       adminNote: "",
       evaluation: "unreviewed",
-      ...(index === 1
-        ? {
-            review: {
-              decision: "agree" as const,
-              note: "Đã xem kết quả minh họa. Tiếp tục theo dõi hồ sơ.",
-              doctorName: users[0].name,
-              reviewedAt: "2026-10-03T09:00:00+07:00",
-            },
-          }
-        : {}),
     })),
   };
 }

@@ -21,9 +21,9 @@ Kiểm thử E2E chạy trên bản production build, tự mở server cổng 30
 
 Phạm vi kiểm thử nghiệp vụ và các trường hợp hồi quy: [docs/testing.md](docs/testing.md).
 
-## Tài khoản demo
+## Tài khoản mock theo vai trò
 
-Chọn vai trò ở màn hình login để tự điền tài khoản. Mật khẩu chung: **Demo@123**.
+Nhập email/số điện thoại và mật khẩu trên trang login. Vai trò được xác định từ tài khoản mock; không có nút vào demo hay tự điền mật khẩu. Mật khẩu chung: **Demo@123**.
 
 | Vai trò       | Email                     |
 | ------------- | ------------------------- |

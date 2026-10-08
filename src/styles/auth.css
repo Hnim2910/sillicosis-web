@@ -140,30 +140,11 @@
 .password-field input {
   padding-right: 43px;
 }
-.demo-accounts {
-  padding: 18px;
-  background: #f6f9fa;
-  border: 1px solid #e7edef;
-  border-radius: 10px;
-  margin-top: 29px;
-}
-.demo-accounts strong {
-  font-size: 11px;
-}
-.demo-accounts span,
-.demo-accounts p {
-  color: #8e9ca5;
-  font-size: 9px;
-}
-.demo-accounts p {
-  margin: 5px 0 13px;
-}
-.demo-role-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-.demo-role-grid .btn {
-  font-size: 10px;
-  padding: 8px;
+.auth-role-note {
+  color: var(--text-muted, #64748b);
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid #e7edef;
 }

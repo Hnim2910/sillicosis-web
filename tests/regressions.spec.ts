@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, fillCredentials } from "./auth-fixture";
 import type { Page } from "@playwright/test";
 import { readFile } from "node:fs/promises";
 import { validPastDate, validatePatient } from "@/utils/validation";
@@ -7,7 +7,7 @@ import { clinicalRowsToRecords } from "@/services/clinicalService";
 
 async function login(page: Page, role: string) {
   await page.goto("/login");
-  await page.getByRole("button", { name: role, exact: true }).click();
+  await fillCredentials(page, role);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL(role === "Quản trị viên" ? /\/admin\/users$/ : /\/dashboard$/);
 }
@@ -90,7 +90,7 @@ test("admin unlock, role change and account deletion persist", async ({ page }) 
   await dialog.getByRole("button", { name: "Lưu tài khoản", exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
-  await page.getByRole("button", { name: "Kỹ thuật viên", exact: true }).click();
+  await fillCredentials(page, "Kỹ thuật viên");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await page.goto("/history/PR-2026-0001");
@@ -101,7 +101,7 @@ test("admin unlock, role change and account deletion persist", async ({ page }) 
   await dialog.getByRole("button", { name: "Xác nhận", exact: true }).click();
   await expect(page.getByRole("row").filter({ hasText: "Lê Thu Hà" })).toHaveCount(0);
   await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
-  await page.getByRole("button", { name: "Kỹ thuật viên", exact: true }).click();
+  await fillCredentials(page, "Kỹ thuật viên");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page.locator(".alert-error")).toContainText("không chính xác");
 });

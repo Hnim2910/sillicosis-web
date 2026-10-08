@@ -27,7 +27,7 @@ export const patientService = {
   async save(input: PatientInput, id?: string) {
     await delay();
     const database = readDatabase();
-    requireUser(database, ["doctor", "technician"]);
+    requireUser(database, ["admin"]);
     const message = validatePatient(input);
     if (message) throw new Error(message);
     if (id) {

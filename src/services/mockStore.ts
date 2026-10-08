@@ -24,6 +24,15 @@ export function readDatabase(): MockDatabase {
       !database.passwords
     )
       throw new Error();
+    // Remove retired roles without resetting patients, predictions or surviving accounts.
+    const removedUsers = database.users.filter(user => user.role !== "patient" && user.role !== "admin");
+    if (removedUsers.length) {
+      const removedIds = new Set(removedUsers.map(user => user.id));
+      database.users = database.users.filter(user => !removedIds.has(user.id));
+      for (const id of removedIds) delete database.passwords[id];
+      if (removedIds.has(sessionStorage.getItem(SESSION_KEY) || "")) sessionStorage.removeItem(SESSION_KEY);
+      writeDatabase(database);
+    }
     return database;
   } catch {
     throw new Error(

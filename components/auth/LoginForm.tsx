@@ -7,9 +7,7 @@ import { Button } from "@/components/common/Button";
 import { Input } from "@/components/common/Input";
 import { Alert } from "@/components/common/Feedback";
 import { authService } from "@/services/authService";
-import { useAsync } from "@/hooks/useAsync";
 import { useAuth } from "@/contexts/AuthContext";
-import { ROLE_LABELS } from "@/constants/app";
 import { errorMessage } from "@/utils/format";
 
 export function LoginForm() {
@@ -18,7 +16,6 @@ export function LoginForm() {
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const { data: demos } = useAsync(authService.getDemoAccounts);
   const { refresh } = useAuth();
   const router = useRouter();
   async function submit(event: React.FormEvent) {
@@ -39,7 +36,9 @@ export function LoginForm() {
     <div className="auth-form">
       <p className="eyebrow">CHÀO MỪNG TRỞ LẠI</p>
       <h2>Đăng nhập SilicoCare</h2>
-      <p className="auth-description">Tiếp tục theo dõi và chăm sóc sức khỏe phổi.</p>
+      <p className="auth-description">
+        Đăng nhập bằng tài khoản được cấp. Hệ thống tự xác định vai trò và quyền truy cập của bạn.
+      </p>
       <form onSubmit={submit} className="stack">
         {error && <Alert>{error}</Alert>}
         <Input
@@ -80,28 +79,7 @@ export function LoginForm() {
       <p className="auth-switch">
         Chưa có tài khoản? <Link href="/register">Đăng ký tài khoản bệnh nhân</Link>
       </p>
-      <div className="demo-accounts">
-        <div className="flex items-center justify-between gap-2">
-          <strong>Khám phá bản demo</strong>
-          <span>Mật khẩu: Demo@123</span>
-        </div>
-        <p>Chọn vai trò để điền thông tin đăng nhập.</p>
-        <div className="demo-role-grid">
-          {demos?.map((account) => (
-            <Button
-              key={account.role}
-              variant="secondary"
-              onClick={() => {
-                setIdentifier(account.email);
-                setPassword(account.password);
-                setError("");
-              }}
-            >
-              {ROLE_LABELS[account.role]}
-            </Button>
-          ))}
-        </div>
-      </div>
+      <p className="auth-role-note">Dành cho Bệnh nhân và Quản trị viên.</p>
     </div>
   );
 }

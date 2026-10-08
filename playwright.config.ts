@@ -15,7 +15,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm run start -- --hostname 127.0.0.1 --port 3040",
+    command: "node node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3040",
     url: "http://127.0.0.1:3040/login",
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,

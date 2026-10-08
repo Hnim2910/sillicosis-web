@@ -3,8 +3,6 @@ import type { PredictionScenario, ReviewDecision } from "@/types/prediction";
 
 export const ROLE_LABELS: Record<Role, string> = {
   patient: "Bệnh nhân",
-  doctor: "Bác sĩ",
-  technician: "Kỹ thuật viên",
   admin: "Quản trị viên",
 };
 export const GENDER_LABELS = { male: "Nam", female: "Nữ", other: "Khác" };

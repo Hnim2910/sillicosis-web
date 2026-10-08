@@ -1,4 +1,3 @@
-import { demoAccounts } from "@/data/mockData";
 import type { AccountInput, ProfileInput } from "@/types/user";
 import {
   currentUser,
@@ -12,10 +11,6 @@ import { createAccount, validateAccount } from "@/services/userService";
 import { validContact, normalizePhone, validPastDate } from "@/utils/validation";
 
 export const authService = {
-  async getDemoAccounts() {
-    await delay(50);
-    return structuredClone(demoAccounts);
-  },
   async getCurrentUser() {
     await delay(50);
     return currentUser();

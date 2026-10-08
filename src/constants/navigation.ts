@@ -5,25 +5,25 @@ export const NAVIGATION = [
     href: "/dashboard",
     label: "Tổng quan",
     icon: "dashboard",
-    roles: ["patient", "doctor", "technician", "admin"],
+    roles: ["patient", "admin"],
   },
   {
     href: "/patients",
     label: "Hồ sơ bệnh nhân",
     icon: "patients",
-    roles: ["doctor", "technician", "admin"],
+    roles: ["admin"],
   },
   {
     href: "/prediction",
     label: "Dự đoán mới",
     icon: "scan",
-    roles: ["patient", "doctor", "technician"],
+    roles: ["patient"],
   },
   {
     href: "/history",
     label: "Lịch sử dự đoán",
     icon: "history",
-    roles: ["patient", "doctor", "technician", "admin"],
+    roles: ["patient", "admin"],
   },
   { href: "/admin/users", label: "Quản lý tài khoản", icon: "users", roles: ["admin"] },
   { href: "/admin/records", label: "Quản lý bản ghi", icon: "records", roles: ["admin"] },
@@ -31,7 +31,7 @@ export const NAVIGATION = [
     href: "/profile",
     label: "Hồ sơ cá nhân",
     icon: "profile",
-    roles: ["patient", "doctor", "technician", "admin"],
+    roles: ["patient", "admin"],
   },
 ] satisfies { href: string; label: string; icon: string; roles: Role[] }[];
 

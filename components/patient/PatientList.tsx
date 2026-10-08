@@ -19,7 +19,7 @@ import { searchText } from "@/utils/format";
 export function PatientList() {
   const { data, error, loading, reload } = useAsync(patientService.getPatients);
   const { user } = useAuth();
-  const editable = user?.role === "doctor" || user?.role === "technician";
+  const editable = user?.role === "admin";
   const [query, setQuery] = useState("");
   const [editing, setEditing] = useState<Patient | null | undefined>(undefined);
   const [success, setSuccess] = useState("");

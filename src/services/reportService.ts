@@ -84,10 +84,10 @@ export const reportService = {
       );
     y += 15;
     if (record.review) {
-      line(`Đánh giá bác sĩ: ${REVIEW_LABELS[record.review.decision]}`, 24, true);
+      line(`Đánh giá đã lưu: ${REVIEW_LABELS[record.review.decision]}`, 24, true);
       line(`${record.review.doctorName} · ${formatDate(record.review.reviewedAt, true)}`, 20);
       line(record.review.note, 22);
-    } else line("Chưa có đánh giá chuyên môn của bác sĩ.", 22);
+    }
     y += 20;
     line(RESULT_NOTICE, 20);
     savePage();

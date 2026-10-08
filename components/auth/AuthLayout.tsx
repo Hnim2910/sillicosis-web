@@ -36,14 +36,16 @@ export function AuthLayout({ children }: { children: ReactNode }) {
             </span>
           </div>
         </div>
-        <small>SilicoCare · Frontend prototype</small>
+        <small>SilicoCare · Chăm sóc sức khỏe phổi</small>
       </section>
       <section className="auth-form-panel">
         <div className="auth-mobile-brand">
           <Brand />
         </div>
         {children}
-        <p className="auth-footnote">Bản demo sử dụng dữ liệu giả lập. Không dùng để chẩn đoán.</p>
+        <p className="auth-footnote">
+          Cần cấp tài khoản hoặc hỗ trợ đăng nhập? Vui lòng liên hệ quản trị viên.
+        </p>
       </section>
     </main>
   );

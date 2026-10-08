@@ -30,14 +30,14 @@ export function StatCards({
     {
       label: "Đã đánh giá",
       value: reviewed,
-      caption: "Đã có nhận xét của bác sĩ",
+      caption: "Đã được quản trị viên đánh giá",
       icon: ClipboardCheck,
       color: "purple",
     },
     {
       label: "Chờ đánh giá",
       value: pending,
-      caption: "Cần bác sĩ xem kết quả",
+      caption: "Chờ quản trị viên đánh giá",
       icon: Clock3,
       color: "amber",
     },

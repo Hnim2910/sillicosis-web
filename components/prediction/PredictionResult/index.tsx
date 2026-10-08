@@ -16,7 +16,6 @@ import { Loading } from "@/components/common/Loading";
 import { Alert, ErrorState } from "@/components/common/Feedback";
 import { ClinicalTable } from "@/components/patient/ClinicalRecords/ClinicalTable";
 import { XrayViewer } from "@/components/prediction/XrayViewer";
-import { MedicalReviewForm } from "@/components/prediction/MedicalReviewForm";
 
 export function PredictionResult({ id }: { id: string }) {
   const loader = useCallback(() => predictionService.get(id), [id]);
@@ -109,42 +108,16 @@ export function PredictionResult({ id }: { id: string }) {
                 </div>
               </div>
             </Card>
-            <Card>
-              <CardHeader
-                title="Đánh giá chuyên môn"
-                description={
-                  record.review
-                    ? "Đánh giá gần nhất của bác sĩ."
-                    : "Kết quả AI đang chờ bác sĩ xem xét."
-                }
-              />
-              <div className="card-body stack">
-                {record.review && (
-                  <div className="review-summary">
-                    <p className="font-semibold mb-2">{REVIEW_LABELS[record.review.decision]}</p>
-                    <p>{record.review.note}</p>
-                    <small>
-                      {record.review.doctorName} · {formatDate(record.review.reviewedAt, true)}
-                    </small>
-                  </div>
-                )}
-                {user?.role === "doctor" ? (
-                  <MedicalReviewForm
-                    record={record}
-                    onSaved={() => {
-                      setMessage("Đã lưu đánh giá chuyên môn.");
-                      void reload();
-                    }}
-                  />
-                ) : (
-                  !record.review && (
-                    <p className="notice">
-                      Chưa có đánh giá. Chức năng đánh giá chỉ dành cho bác sĩ.
-                    </p>
-                  )
-                )}
-              </div>
-            </Card>
+            {record.review && (
+              <Card>
+                <CardHeader title="Đánh giá đã lưu" description="Thông tin đánh giá từ hồ sơ trước đây." />
+                <div className="card-body review-summary">
+                  <p className="font-semibold mb-2">{REVIEW_LABELS[record.review.decision]}</p>
+                  <p>{record.review.note}</p>
+                  <small>{record.review.doctorName} · {formatDate(record.review.reviewedAt, true)}</small>
+                </div>
+              </Card>
+            )}
           </div>
         </div>
         <Card>

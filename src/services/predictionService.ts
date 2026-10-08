@@ -1,4 +1,4 @@
-import type { Prediction, PredictionInput, ReviewDecision } from "@/types/prediction";
+import type { Prediction, PredictionInput } from "@/types/prediction";
 import { MODEL_VERSION } from "@/constants/app";
 import {
   createId,
@@ -72,21 +72,6 @@ export const predictionService = {
       structuredClone(input.clinicalRecords);
     writeDatabase(database);
     return prediction;
-  },
-  async review(id: string, decision: ReviewDecision, note: string) {
-    await delay();
-    const database = readDatabase();
-    const user = requireUser(database, ["doctor"]);
-    const prediction = database.predictions.find((entry) => entry.id === id);
-    if (!prediction) throw new Error("Bản ghi không tồn tại.");
-    if (!note.trim()) throw new Error("Vui lòng nhập ghi chú chuyên môn.");
-    prediction.review = {
-      decision,
-      note: note.trim(),
-      doctorName: user.name,
-      reviewedAt: new Date().toISOString(),
-    };
-    writeDatabase(database);
   },
   async updateRecord(id: string, adminNote: string, evaluation: Prediction["evaluation"]) {
     await delay();

@@ -66,7 +66,7 @@ export function PatientDetail({ id }: { id: string }) {
   const { data, loading, error, reload } = useAsync(loader);
   const { user } = useAuth();
   const [editing, setEditing] = useState(false);
-  const editable = user?.role === "doctor" || user?.role === "technician";
+  const editable = user?.role === "admin";
   if (loading) return <Loading />;
   if (error || !data)
     return <ErrorState message={error || "Không tìm thấy bệnh nhân."} retry={reload} />;

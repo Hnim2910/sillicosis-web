@@ -13,7 +13,7 @@ export const dashboardService = {
       total: records.length,
       silicosis: records.filter((record) => record.label === "Silicosis").length,
       normal: records.filter((record) => record.label === "Normal").length,
-      pending: records.filter((record) => !record.review).length,
+      pending: records.filter((record) => record.evaluation === "unreviewed").length,
     };
   },
 };

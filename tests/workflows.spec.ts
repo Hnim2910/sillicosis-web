@@ -1,10 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, fillCredentials } from "./auth-fixture";
 import type { Page } from "@playwright/test";
 import path from "node:path";
 
 async function login(page: Page, role = "Bác sĩ") {
   await page.goto("/login");
-  await page.getByRole("button", { name: role, exact: true }).click();
+  await fillCredentials(page, role);
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page).toHaveURL(role === "Quản trị viên" ? /\/admin\/users$/ : /\/dashboard$/);
 }
@@ -12,7 +12,7 @@ async function login(page: Page, role = "Bác sĩ") {
 test("login, dashboard and route states", async ({ page }) => {
   await page.goto("/dashboard");
   await expect(page).toHaveURL(/\/login$/);
-  await page.getByRole("button", { name: "Bác sĩ", exact: true }).click();
+  await fillCredentials(page, "Bác sĩ");
   await page.getByLabel("Mật khẩu", { exact: true }).fill("incorrect");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page.locator(".alert-error")).toContainText("không chính xác");
@@ -103,23 +103,19 @@ test("prediction image validation, failure, result, review, PDF and history", as
 test("clinical CSV preview, validation and saved timeline", async ({ page }) => {
   await login(page);
   await page.goto("/patients/BN-0001");
-  await page
-    .getByLabel("Chọn tệp dữ liệu lâm sàng")
-    .setInputFiles({
-      name: "bad.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from("date,wrong\n2026-01-02,1"),
-    });
+  await page.getByLabel("Chọn tệp dữ liệu lâm sàng").setInputFiles({
+    name: "bad.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from("date,wrong\n2026-01-02,1"),
+  });
   await expect(page.locator(".alert-error")).toContainText("Sai cấu trúc cột");
-  await page
-    .getByLabel("Chọn tệp dữ liệu lâm sàng")
-    .setInputFiles({
-      name: "records.csv",
-      mimeType: "text/csv",
-      buffer: Buffer.from(
-        "date,exposureYears,dustLevel,fvc,fev1\n2026-01-02,12,0.2,84,80\n2026-02-02,12,0.4,83,79",
-      ),
-    });
+  await page.getByLabel("Chọn tệp dữ liệu lâm sàng").setInputFiles({
+    name: "records.csv",
+    mimeType: "text/csv",
+    buffer: Buffer.from(
+      "date,exposureYears,dustLevel,fvc,fev1\n2026-01-02,12,0.2,84,80\n2026-02-02,12,0.4,83,79",
+    ),
+  });
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText("2 mốc hợp lệ", { exact: false })).toBeVisible();
   await dialog.getByRole("button", { name: "Xác nhận dữ liệu" }).click();
@@ -163,7 +159,7 @@ test("admin account lock, self protection, cancel and record deletion", async ({
   await page.getByRole("dialog").getByRole("button", { name: "Xác nhận", exact: true }).click();
   await expect(page.getByRole("row").filter({ hasText: "Trần Văn Hùng" })).toContainText("Đã khóa");
   await page.getByRole("button", { name: "Đăng xuất", exact: true }).click();
-  await page.getByRole("button", { name: "Bệnh nhân", exact: true }).click();
+  await fillCredentials(page, "Bệnh nhân");
   await page.getByRole("button", { name: "Đăng nhập", exact: true }).click();
   await expect(page.locator(".alert-error")).toContainText("đã bị khóa");
   await login(page, "Quản trị viên");

@@ -4,6 +4,10 @@ Chạy `npm run lint`, `npm run build`, sau đó `npm run test:e2e`.
 
 Playwright mở bản production trên cổng 3040, dùng Chrome headless. Mỗi bài kiểm thử trình duyệt có context riêng để dữ liệu localStorage và phiên đăng nhập không ảnh hưởng lẫn nhau hoặc thay đổi dữ liệu demo của người dùng ở cổng 3000.
 
+## Đăng nhập bằng mock data
+
+`tests/auth.spec.ts` kiểm tra cả bốn role đăng nhập thủ công, giữ phiên sau khi tải lại, đăng xuất và không có request `/api/` hay khung chọn tài khoản demo.
+
 ## Luồng nghiệp vụ
 
 `tests/workflows.spec.ts` kiểm tra:
