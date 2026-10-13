@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAsync } from "@/hooks/useAsync";
 import { patientService } from "@/services/patientService";
 import { ROLE_LABELS } from "@/constants/app";
+import { PASSWORD_RULE } from "@/utils/validation";
 import { Card, CardHeader } from "@/components/common/Card";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Loading } from "@/components/common/Loading";
@@ -55,7 +56,7 @@ export function ProfileOverview() {
             </div>
           </Card>
           <Card>
-            <CardHeader title="Đổi mật khẩu" description="Mật khẩu mới có ít nhất 8 ký tự." />
+            <CardHeader title="Đổi mật khẩu" description={`Mật khẩu mới gồm ${PASSWORD_RULE}`} />
             <div className="card-body">
               <PasswordForm />
             </div>

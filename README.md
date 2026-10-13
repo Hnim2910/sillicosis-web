@@ -21,18 +21,22 @@ Kiểm thử E2E chạy trên bản production build, tự mở server cổng 30
 
 Phạm vi kiểm thử nghiệp vụ và các trường hợp hồi quy: [docs/testing.md](docs/testing.md).
 
-## Tài khoản mock theo vai trò
+## Đăng nhập (backend thật)
 
-Nhập email/số điện thoại và mật khẩu trên trang login. Vai trò được xác định từ tài khoản mock; không có nút vào demo hay tự điền mật khẩu. Mật khẩu chung: **Demo@123**.
+Đăng ký, đăng nhập, quên mật khẩu, hồ sơ cá nhân và đổi mật khẩu gọi backend `silicosis-backend` (hợp đồng API: `silicosis-backend/docs/api-auth.md`). Các phần còn lại (bệnh nhân, ảnh, dự đoán, báo cáo, tổng quan, trang quản trị người dùng) vẫn là mock trong trình duyệt.
 
-| Vai trò       | Email                     |
-| ------------- | ------------------------- |
-| Bác sĩ        | doctor@silicosis.demo     |
-| Bệnh nhân     | patient@silicosis.demo    |
-| Kỹ thuật viên | technician@silicosis.demo |
-| Quản trị viên | admin@silicosis.demo      |
+1. Chạy backend theo hướng dẫn của repo backend (`docker compose up -d` rồi `./mvnw clean spring-boot:run`).
+2. Tạo `.env.local` từ `.env.example`, đặt `NEXT_PUBLIC_API_URL` trỏ tới backend (mặc định `http://localhost:8080`). Biến này được gắn vào bundle lúc build: đổi giá trị thì khởi động lại `npm run dev` hoặc build lại.
+3. Nếu web chạy ở origin khác `http://localhost:3000`, thêm origin đó vào biến môi trường `APP_CORS_ALLOWED_ORIGIN_PATTERNS` của backend (thuộc tính `app.cors.allowed-origin-patterns`, các giá trị cách nhau bởi dấu phẩy).
 
-Tài khoản bệnh nhân chỉ thấy hồ sơ và kết quả của mình. Đăng ký tạo tài khoản Patient mới và hồ sơ rỗng. Có thể dùng email hoặc số điện thoại để đăng ký/đăng nhập.
+| Vai trò       | Tài khoản                                                            |
+| ------------- | -------------------------------------------------------------------- |
+| Quản trị viên | Tài khoản duy nhất được seed từ `ADMIN_EMAIL` / `ADMIN_PASSWORD` trong `.env` của backend |
+| Bệnh nhân     | Tự đăng ký tại `/register` (email bắt buộc, SĐT không bắt buộc), đăng ký xong tự đăng nhập |
+
+Mật khẩu: 8–72 ký tự, có ít nhất 1 chữ cái và 1 chữ số. Sai mật khẩu 5 lần liên tiếp thì tài khoản bị khoá 15 phút. Quên mật khẩu: nhập email → mã OTP 6 chữ số gửi qua email → đặt mật khẩu mới.
+
+Phiên đăng nhập: access token chỉ giữ trong bộ nhớ của tab; refresh token lưu trong `localStorage` (khoá `silicocare-refresh-token`) để giữ phiên khi tải lại trang. Tài khoản bệnh nhân từ backend chưa liên kết với hồ sơ bệnh nhân mock nên các trang hồ sơ/kết quả của bệnh nhân đang trống. Tài khoản mock cũ (`*@silicosis.demo`, `Demo@123`) không còn đăng nhập được; chúng chỉ còn là dữ liệu hiển thị trong trang quản trị mock.
 
 ## Source code
 

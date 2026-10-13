@@ -57,7 +57,9 @@ public/
 
 ## Luồng dữ liệu và trạng thái
 
-Component → service async → mockStore → localStorage. Chỉ tầng service đọc mockData. Session lưu ID trong sessionStorage; dữ liệu demo lưu dưới khóa `silicosis-demo-v1`. Mật khẩu chỉ dùng cho mô phỏng, không phải cơ chế bảo mật. Guard route và service đều kiểm tra vai trò/phạm vi bệnh nhân; khi nối backend cần thay bằng kiểm tra quyền phía server.
+Xác thực: Component → `authService` → `src/lib/apiClient.ts` → backend. `apiClient` gắn Bearer token, khi gặp 401 thì refresh đúng một lần (các request đồng thời dùng chung một promise, các tab xếp hàng qua Web Lock vì refresh token xoay vòng) rồi gửi lại; refresh thất bại thì xoá phiên và về `/login`. Chuyển đổi dữ liệu user backend ↔ web (vai trò `USER`/`ADMIN` ↔ `patient`/`admin`, `fullName` ↔ `name`, `enabled` ↔ `active`, giới tính) chỉ nằm trong `src/services/userMapper.ts`.
+
+Các phần còn lại: Component → service async → mockStore → localStorage (khóa `silicosis-demo-v1`). Chỉ tầng service đọc mockData. `mockStore.currentUser()` lấy user đang đăng nhập từ `authService`, nên guard route và service mock vẫn kiểm tra vai trò/phạm vi bệnh nhân; khi nối backend cho các phần này cần thay bằng kiểm tra quyền phía server.
 
 `useAsync` xử lý loading/error/retry và bỏ qua kết quả cũ khi unmount hoặc thay loader. Mutation có trạng thái busy, lỗi và thành công. Các form validate cả trong UI và service. Modal dùng dialog để focus trap, Escape và trả focus. Navigation trên màn hình nhỏ dùng lại Sidebar trong modal.
 

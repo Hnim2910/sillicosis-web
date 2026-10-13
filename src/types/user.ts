@@ -10,7 +10,8 @@ export interface User {
   active: boolean;
   patientId?: string;
   birthDate: string;
-  gender: Gender;
+  /** Empty when the account has not set a gender yet. */
+  gender: Gender | "";
   occupation: string;
 }
 
@@ -29,6 +30,5 @@ export type ProfileInput = Pick<
 export interface DemoAccount {
   name: string;
   email: string;
-  password: string;
   role: Role;
 }

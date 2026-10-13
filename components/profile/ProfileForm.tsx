@@ -7,7 +7,7 @@ import { Input, Select } from "@/components/common/Input";
 import { Button } from "@/components/common/Button";
 import { Alert } from "@/components/common/Feedback";
 import { errorMessage, today } from "@/utils/format";
-import { validContact, validPastDate } from "@/utils/validation";
+import { validEmail, validPastDate, validVnMobile } from "@/utils/validation";
 
 export function ProfileForm({ user }: { user: User }) {
   const [form, setForm] = useState<ProfileInput>({
@@ -48,19 +48,13 @@ export function ProfileForm({ user }: { user: User }) {
       {success && <Alert tone="success">Đã cập nhật hồ sơ cá nhân.</Alert>}
       <Input label="Họ và tên" required value={form.name} onChange={change("name")} />
       <div className="form-grid">
-        <Input
-          label="Email"
-          type="email"
-          required={!form.phone}
-          value={form.email}
-          onChange={change("email")}
-        />
+        <Input label="Email" type="email" required value={form.email} onChange={change("email")} />
         <Input
           label="Số điện thoại"
           type="tel"
-          required={!form.email}
           value={form.phone}
           onChange={change("phone")}
+          error={!validVnMobile(form.phone) ? "Số di động Việt Nam không hợp lệ." : undefined}
         />
         <Input
           label="Ngày sinh"
@@ -74,6 +68,7 @@ export function ProfileForm({ user }: { user: User }) {
           }
         />
         <Select label="Giới tính" value={form.gender} onChange={change("gender")}>
+          <option value="">Chưa cập nhật</option>
           {Object.entries(GENDER_LABELS).map(([key, label]) => (
             <option value={key} key={key}>
               {label}
@@ -88,7 +83,8 @@ export function ProfileForm({ user }: { user: User }) {
           busy={busy}
           disabled={
             form.name.trim().length < 2 ||
-            !validContact(form.email, form.phone) ||
+            !validEmail(form.email.trim()) ||
+            !validVnMobile(form.phone) ||
             (!!form.birthDate && !validPastDate(form.birthDate))
           }
         >

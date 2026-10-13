@@ -67,6 +67,9 @@ export function LoginForm() {
             {visible ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         </div>
+        <p className="auth-forgot">
+          <Link href="/forgot-password">Quên mật khẩu?</Link>
+        </p>
         <Button
           type="submit"
           busy={busy}

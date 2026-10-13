@@ -4,8 +4,8 @@ import type { Patient } from "@/types/patient";
 import { MODEL_VERSION } from "@/constants/app";
 
 export const demoAccounts: DemoAccount[] = [
-  { name: "Trần Văn Hùng", email: "patient@silicosis.demo", password: "Demo@123", role: "patient" },
-  { name: "Phạm Hoàng Nam", email: "admin@silicosis.demo", password: "Demo@123", role: "admin" },
+  { name: "Trần Văn Hùng", email: "patient@silicosis.demo", role: "patient" },
+  { name: "Phạm Hoàng Nam", email: "admin@silicosis.demo", role: "admin" },
 ];
 
 const patientSeeds = [
@@ -118,7 +118,6 @@ export function createMockDatabase(): MockDatabase {
     version: 1,
     users,
     patients,
-    passwords: Object.fromEntries(users.map((user) => [user.id, "Demo@123"])),
     predictions: Array.from({ length: 8 }, (_, index) => ({
       id: `PR-2026-${String(index + 1).padStart(4, "0")}`,
       patientId: patients[index % patients.length].id,

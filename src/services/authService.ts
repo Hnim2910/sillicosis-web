@@ -1,89 +1,130 @@
-import type { AccountInput, ProfileInput } from "@/types/user";
+import type { AccountInput, ProfileInput, User } from "@/types/user";
 import {
-  currentUser,
-  delay,
-  readDatabase,
-  requireUser,
-  setSession,
-  writeDatabase,
-} from "@/services/mockStore";
-import { createAccount, validateAccount } from "@/services/userService";
-import { validContact, normalizePhone, validPastDate } from "@/utils/validation";
+  apiRequest,
+  clearTokens,
+  consumeRefreshedUser,
+  hasStoredSession,
+  refreshSession,
+  SESSION_EVENT,
+  storeTokens,
+  takeRefreshToken,
+} from "@/lib/apiClient";
+import type { TokenPair } from "@/lib/apiClient";
+import { toApiProfile, toUser } from "@/services/userMapper";
+import type { ApiUser } from "@/services/userMapper";
+
+type AuthResponse = TokenPair & { user: ApiUser };
+
+// Signed-in user for this tab; mockStore reads it so the mock features keep their role checks.
+let sessionUser: User | null = null;
+
+export function getSessionUser() {
+  return sessionUser;
+}
+
+function setSessionUser(user: User | null) {
+  sessionUser = user;
+  window.dispatchEvent(new Event(SESSION_EVENT));
+  return user;
+}
+
+function startSession(response: AuthResponse) {
+  storeTokens(response);
+  return setSessionUser(toUser(response.user))!;
+}
 
 export const authService = {
+  /** Returns the signed-in user, restoring the session from the stored refresh token after a reload. */
   async getCurrentUser() {
-    await delay(50);
-    return currentUser();
+    if (!hasStoredSession()) {
+      // Another tab may have signed out: drop this tab's access token too.
+      clearTokens();
+      sessionUser = null;
+      return null;
+    }
+    if (sessionUser) return sessionUser;
+    if (!(await refreshSession())) return null;
+    const user = consumeRefreshedUser() as ApiUser | null;
+    sessionUser = toUser(user || (await apiRequest<ApiUser>("/api/users/me")));
+    return sessionUser;
   },
   async login(identifier: string, password: string) {
-    await delay(500);
-    const database = readDatabase();
-    const user = database.users.find(
-      (entry) =>
-        (!!entry.email && entry.email.toLowerCase() === identifier.trim().toLowerCase()) ||
-        (!!entry.phone && normalizePhone(entry.phone) === normalizePhone(identifier.trim())),
-    );
-    if (!user || database.passwords[user.id] !== password)
-      throw new Error("Email, số điện thoại hoặc mật khẩu không chính xác.");
-    if (!user.active) throw new Error("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
-    setSession(user.id);
-    return user;
+    const response = await apiRequest<AuthResponse>("/api/auth/login", {
+      method: "POST",
+      body: { identifier: identifier.trim(), password },
+      auth: false,
+    });
+    return startSession(response);
   },
   async logout() {
-    setSession(null);
+    const refreshToken = takeRefreshToken();
+    setSessionUser(null);
+    if (!refreshToken) return;
+    // Revoking server-side is best effort: the local session is already gone.
+    await apiRequest("/api/auth/logout", {
+      method: "POST",
+      body: { refreshToken },
+      auth: false,
+    }).catch(() => undefined);
   },
+  /** Backend signs the new patient in straight away. */
   async register(input: Omit<AccountInput, "role">) {
-    await delay(450);
-    const database = readDatabase();
-    validateAccount(database, { ...input, role: "patient" });
-    const user = createAccount(database, { ...input, role: "patient" });
-    writeDatabase(database);
-    return user;
+    const response = await apiRequest<AuthResponse>("/api/auth/register", {
+      method: "POST",
+      body: {
+        fullName: input.name.trim(),
+        email: input.email.trim(),
+        phone: input.phone.trim() || null,
+        password: input.password,
+      },
+      auth: false,
+    });
+    return startSession(response);
   },
   async updateProfile(input: ProfileInput) {
-    await delay();
-    const database = readDatabase();
-    const user = requireUser(database);
-    if (input.name.trim().length < 2 || !validContact(input.email, input.phone))
-      throw new Error("Vui lòng kiểm tra họ tên, email và số điện thoại.");
-    if (input.birthDate && !validPastDate(input.birthDate))
-      throw new Error("Ngày sinh không hợp lệ.");
-    if (
-      database.users.some(
-        (entry) =>
-          entry.id !== user.id &&
-          ((!!input.email.trim() &&
-            entry.email.toLowerCase() === input.email.trim().toLowerCase()) ||
-            (!!input.phone && normalizePhone(entry.phone) === normalizePhone(input.phone))),
-      )
-    )
-      throw new Error("Email hoặc số điện thoại đã được sử dụng.");
-    Object.assign(user, input, {
-      name: input.name.trim(),
-      email: input.email.trim().toLowerCase(),
-      phone: normalizePhone(input.phone),
+    const user = await apiRequest<ApiUser>("/api/users/me", {
+      method: "PUT",
+      body: toApiProfile(input),
     });
-    const patient = database.patients.find((entry) => entry.id === user.patientId);
-    if (patient)
-      Object.assign(patient, {
-        name: user.name,
-        birthDate: user.birthDate,
-        phone: user.phone,
-        gender: user.gender,
-        occupation: user.occupation,
-      });
-    writeDatabase(database);
-    window.dispatchEvent(new Event("silicosis-session"));
-    return user;
+    return setSessionUser(toUser(user))!;
   },
   async changePassword(oldPassword: string, newPassword: string) {
-    await delay();
-    const database = readDatabase();
-    const user = requireUser(database);
-    if (database.passwords[user.id] !== oldPassword)
-      throw new Error("Mật khẩu hiện tại không chính xác.");
-    if (newPassword.length < 8) throw new Error("Mật khẩu mới phải có ít nhất 8 ký tự.");
-    database.passwords[user.id] = newPassword;
-    writeDatabase(database);
+    await apiRequest("/api/users/me/password", {
+      method: "PUT",
+      body: { currentPassword: oldPassword, newPassword },
+    });
+    // The backend revokes every refresh token on success; sign in again to keep this tab's session.
+    const email = sessionUser?.email;
+    try {
+      if (!email) throw new Error();
+      await authService.login(email, newPassword);
+    } catch {
+      clearTokens();
+      setSessionUser(null);
+    }
+  },
+  /** Always resolves with the same message, whether or not the email is registered. */
+  async forgotPassword(email: string) {
+    const response = await apiRequest<{ message: string }>("/api/auth/forgot-password", {
+      method: "POST",
+      body: { email: email.trim() },
+      auth: false,
+    });
+    return response.message;
+  },
+  async verifyOtp(email: string, otp: string) {
+    const response = await apiRequest<{ resetToken: string }>("/api/auth/verify-otp", {
+      method: "POST",
+      body: { email: email.trim(), otp },
+      auth: false,
+    });
+    return response.resetToken;
+  },
+  async resetPassword(resetToken: string, newPassword: string) {
+    await apiRequest("/api/auth/reset-password", {
+      method: "POST",
+      body: { resetToken, newPassword },
+      auth: false,
+    });
   },
 };

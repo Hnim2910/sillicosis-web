@@ -28,7 +28,7 @@ function linkPatient(database: MockDatabase, user: User) {
     id: user.patientId,
     name: user.name,
     birthDate: user.birthDate,
-    gender: user.gender,
+    gender: user.gender || "other",
     phone: user.phone,
     occupation: user.occupation,
     workplace: "",
@@ -52,7 +52,6 @@ export function createAccount(database: MockDatabase, input: AccountInput) {
     occupation: "",
   };
   database.users.push(user);
-  database.passwords[user.id] = input.password;
   linkPatient(database, user);
   return user;
 }
@@ -80,7 +79,6 @@ export const userService = {
         phone: normalizePhone(input.phone),
         role: input.role,
       });
-      if (input.password) database.passwords[id] = input.password;
       linkPatient(database, user);
       const patient = database.patients.find((entry) => entry.id === user.patientId);
       if (patient) Object.assign(patient, { name: user.name, phone: user.phone });
@@ -97,7 +95,6 @@ export const userService = {
     if (!user) throw new Error("Tài khoản không tồn tại.");
     if (action === "delete") {
       database.users = database.users.filter((entry) => entry.id !== id);
-      delete database.passwords[id];
     } else user.active = action === "unlock";
     writeDatabase(database);
   },

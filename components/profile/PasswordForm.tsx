@@ -5,6 +5,7 @@ import { Input } from "@/components/common/Input";
 import { Button } from "@/components/common/Button";
 import { Alert } from "@/components/common/Feedback";
 import { errorMessage } from "@/utils/format";
+import { PASSWORD_RULE, validPassword } from "@/utils/validation";
 
 export function PasswordForm() {
   const [oldPassword, setOldPassword] = useState("");
@@ -51,8 +52,8 @@ export function PasswordForm() {
         value={password}
         onChange={(event) => setPassword(event.target.value)}
         required
-        minLength={8}
-        error={password && password.length < 8 ? "Cần ít nhất 8 ký tự." : undefined}
+        maxLength={72}
+        error={password && !validPassword(password) ? `Cần ${PASSWORD_RULE}` : undefined}
       />
       <Input
         label="Xác nhận mật khẩu mới"
@@ -66,7 +67,7 @@ export function PasswordForm() {
       <Button
         type="submit"
         busy={busy}
-        disabled={!oldPassword || password.length < 8 || password !== confirm}
+        disabled={!oldPassword || !validPassword(password) || password !== confirm}
       >
         Đổi mật khẩu
       </Button>

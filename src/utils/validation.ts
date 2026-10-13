@@ -12,6 +12,17 @@ export function normalizePhone(value: string) {
   return value.replace(/[\s()-]/g, "");
 }
 
+/** Same rule as the backend: 8–72 characters with at least one letter and one digit. */
+export function validPassword(value: string) {
+  return /^(?=.*\p{L})(?=.*\d).{8,72}$/u.test(value);
+}
+export const PASSWORD_RULE = "8–72 ký tự, có ít nhất 1 chữ cái và 1 chữ số.";
+
+/** Vietnamese mobile number; the backend normalises it and has the final say. */
+export function validVnMobile(value: string) {
+  return !value.trim() || /^(?:\+?84|0)[35789]\d{8}$/.test(value.replace(/[\s.()-]/g, ""));
+}
+
 export function validContact(email: string, phone: string) {
   return (
     !!(email.trim() || phone.trim()) &&

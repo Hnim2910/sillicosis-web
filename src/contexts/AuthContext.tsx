@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from "rea
 import type { ReactNode } from "react";
 import type { User } from "@/types/user";
 import { authService } from "@/services/authService";
+import { isSignOutEvent, SESSION_EVENT } from "@/lib/apiClient";
 import { errorMessage } from "@/utils/format";
 
 const AuthContext = createContext<{
@@ -31,17 +32,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const timer = setTimeout(() => {
       void refresh();
     }, 0);
+    // Login, logout, profile updates and expired sessions in this tab.
     const sync = () => {
       void refresh();
     };
-    window.addEventListener("silicosis-session", sync);
-    window.addEventListener("storage", sync);
-    window.addEventListener("focus", sync);
+    // Sign-out in another tab removes the shared refresh token. Token rotation is ignored on
+    // purpose: reacting to it would make tabs refresh each other in a loop.
+    const syncTabs = (event: StorageEvent) => {
+      if (isSignOutEvent(event)) void refresh();
+    };
+    window.addEventListener(SESSION_EVENT, sync);
+    window.addEventListener("storage", syncTabs);
     return () => {
       clearTimeout(timer);
-      window.removeEventListener("silicosis-session", sync);
-      window.removeEventListener("storage", sync);
-      window.removeEventListener("focus", sync);
+      window.removeEventListener(SESSION_EVENT, sync);
+      window.removeEventListener("storage", syncTabs);
     };
   }, [refresh]);
   return <AuthContext value={{ user, loading, error, refresh }}>{children}</AuthContext>;
