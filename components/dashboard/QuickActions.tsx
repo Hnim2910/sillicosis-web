@@ -18,13 +18,13 @@ export function QuickActions({ role }: { role: Role }) {
           {
             href: "/admin/users",
             title: "Quản lý tài khoản",
-            detail: "Tạo tài khoản và phân quyền",
+            detail: "Tạo, khoá hoặc xoá tài khoản bệnh nhân",
             icon: ShieldCheck,
           },
           {
             href: "/admin/records",
             title: "Quản lý bản ghi",
-            detail: "Ghi chú và đánh giá mô hình",
+            detail: "Tra cứu và xoá lượt khám",
             icon: ClipboardList,
           },
         ]
@@ -32,13 +32,13 @@ export function QuickActions({ role }: { role: Role }) {
           {
             href: "/prediction",
             title: "Phân tích ảnh X-quang",
-            detail: "Bắt đầu một lần sàng lọc mới",
+            detail: "Lưu một lượt khám và chạy dự đoán",
             icon: ScanLine,
           },
           {
             href: role === "patient" ? "/profile" : "/patients",
             title: role === "patient" ? "Hồ sơ của tôi" : "Hồ sơ bệnh nhân",
-            detail: "Cập nhật thông tin và dữ liệu theo dõi",
+            detail: "Cập nhật thông tin cá nhân",
             icon: role === "patient" ? UserRound : UsersRound,
           },
         ];

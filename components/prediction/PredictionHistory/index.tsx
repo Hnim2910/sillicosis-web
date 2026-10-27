@@ -2,12 +2,12 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { Plus } from "lucide-react";
-import type { Prediction } from "@/types/prediction";
-import { predictionService } from "@/services/predictionService";
+import type { Visit } from "@/types/visit";
+import { visitOutcome, visitService } from "@/services/visitService";
 import { patientService } from "@/services/patientService";
 import { useAsync } from "@/hooks/useAsync";
 import { useAuth } from "@/contexts/AuthContext";
-import { errorMessage, searchText } from "@/utils/format";
+import { errorMessage, formatDate, searchText } from "@/utils/format";
 import { Card, CardHeader } from "@/components/common/Card";
 import { PageHeader } from "@/components/common/PageHeader";
 import { HistoryFilters } from "./HistoryFilters";
@@ -16,7 +16,6 @@ import { Loading } from "@/components/common/Loading";
 import { Alert, EmptyState, ErrorState } from "@/components/common/Feedback";
 import { Modal } from "@/components/common/Modal";
 import { HistoryTable } from "./HistoryTable";
-import { RecordEditor } from "@/components/admin/RecordEditor";
 
 export function PredictionHistory({
   patientId,
@@ -27,36 +26,31 @@ export function PredictionHistory({
   manage?: boolean;
   embedded?: boolean;
 }) {
-  const loader = useCallback(
-    async () => ({
-      records: await predictionService.list(patientId),
-      patients: await patientService.getPatients(),
-    }),
-    [patientId],
-  );
-  const { data, loading, error, reload } = useAsync(loader);
   const { user } = useAuth();
+  const role = user?.role;
+  const loader = useCallback(async () => {
+    if (patientId) return visitService.listForPatient(patientId);
+    if (role === "admin") return visitService.listAll();
+    return visitService.listForPatient((await patientService.getMine()).id);
+  }, [patientId, role]);
+  const { data, loading, error, reload } = useAsync(loader);
   const [query, setQuery] = useState("");
   const [label, setLabel] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [page, setPage] = useState(1);
-  const [edit, setEdit] = useState<Prediction | null>(null);
-  const [remove, setRemove] = useState<Prediction | null>(null);
+  const [remove, setRemove] = useState<Visit | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [mutationError, setMutationError] = useState("");
   const dateError = !!from && !!to && from > to;
-  const records = (data?.records || []).filter((record) => {
-    const name = data?.patients.find((patient) => patient.id === record.patientId)?.name || "";
-    const date = new Date(record.createdAt).toLocaleDateString("en-CA");
-    return (
-      searchText(`${name} ${record.id} ${record.patientId}`).includes(searchText(query)) &&
-      (!label || record.label === label) &&
-      (!from || date >= from) &&
-      (!to || date <= to)
-    );
-  });
+  const records = (data || []).filter(
+    (visit) =>
+      searchText(`${visit.patient.fullName} ${visit.patient.code}`).includes(searchText(query)) &&
+      (!label || visitOutcome(visit) === label) &&
+      (!from || visit.visitDate >= from) &&
+      (!to || visit.visitDate <= to),
+  );
   const pages = Math.max(1, Math.ceil(records.length / 8));
   const currentPage = Math.min(page, pages);
   const admin = manage && user?.role === "admin";
@@ -67,8 +61,8 @@ export function PredictionHistory({
           title={manage ? "Quản lý bản ghi" : "Lịch sử dự đoán"}
           description={
             manage
-              ? "Tra cứu, bổ sung ghi chú và đánh giá dữ liệu mô hình."
-              : "Xem lại kết quả và theo dõi các lần sàng lọc theo thời gian."
+              ? "Tra cứu và xoá lượt khám của mọi bệnh nhân."
+              : "Xem lại kết quả và theo dõi các lượt khám theo thời gian."
           }
           action={
             user?.role !== "admin" && (
@@ -87,8 +81,8 @@ export function PredictionHistory({
       )}
       <Card>
         <CardHeader
-          title={embedded ? "Lịch sử của bệnh nhân" : "Các lần phân tích"}
-          description={`${data?.records.length || 0} bản ghi · Sắp xếp mới nhất trước`}
+          title={embedded ? "Lượt khám của bệnh nhân" : "Các lượt khám"}
+          description={`${data?.length || 0} lượt khám · Mới nhất trước`}
         />
         <HistoryFilters
           query={query}
@@ -129,8 +123,7 @@ export function PredictionHistory({
         ) : (
           <HistoryTable
             records={records.slice((currentPage - 1) * 8, currentPage * 8)}
-            patients={data?.patients || []}
-            onEdit={admin ? setEdit : undefined}
+            showPatient={!embedded && user?.role === "admin"}
             onDelete={
               admin
                 ? (record) => {
@@ -163,21 +156,9 @@ export function PredictionHistory({
           </div>
         </div>
       </Card>
-      <Modal open={!!edit} title="Cập nhật bản ghi" onClose={() => setEdit(null)}>
-        {edit && (
-          <RecordEditor
-            record={edit}
-            onSaved={() => {
-              setEdit(null);
-              setMessage("Đã cập nhật bản ghi.");
-              void reload();
-            }}
-          />
-        )}
-      </Modal>
       <Modal
         open={!!remove}
-        title="Xóa bản ghi dự đoán?"
+        title="Xoá lượt khám?"
         onClose={() => {
           if (!busy) setRemove(null);
         }}
@@ -185,8 +166,9 @@ export function PredictionHistory({
         <div className="stack">
           {mutationError && <Alert>{mutationError}</Alert>}
           <p>
-            Bản ghi <strong>{remove?.id}</strong> và ảnh liên quan sẽ được xóa khỏi dữ liệu demo. Hồ
-            sơ bệnh nhân vẫn được giữ lại.
+            Lượt khám ngày <strong>{remove && formatDate(remove.visitDate)}</strong> của{" "}
+            <strong>{remove?.patient.fullName}</strong> sẽ bị xoá cùng kết quả dự đoán. Ảnh X-quang
+            và hồ sơ bệnh nhân vẫn được giữ lại.
           </p>
           <div className="form-actions">
             <Button variant="secondary" disabled={busy} onClick={() => setRemove(null)}>
@@ -200,9 +182,9 @@ export function PredictionHistory({
                 setBusy(true);
                 setMutationError("");
                 try {
-                  await predictionService.remove(remove.id);
+                  await visitService.remove(remove.id);
                   setRemove(null);
-                  setMessage("Đã xóa bản ghi và ảnh liên quan.");
+                  setMessage("Đã xoá lượt khám.");
                   void reload();
                 } catch (reason) {
                   setMutationError(errorMessage(reason));

@@ -1,71 +1,77 @@
-import type { ClinicalRecord, PatientInput } from "@/types/patient";
-import {
-  createId,
-  delay,
-  readDatabase,
-  requirePatientAccess,
-  requireUser,
-  writeDatabase,
-} from "@/services/mockStore";
-import { validateClinicalRecords, validatePatient } from "@/utils/validation";
+import type { Patient, PatientInput } from "@/types/patient";
+import type { Gender } from "@/types/user";
+import { apiAllPages, apiRequest } from "@/lib/apiClient";
+import { validatePatient } from "@/utils/validation";
+
+// Backend shape: silicosis-backend/docs/api-patients.md.
+type ApiGender = "MALE" | "FEMALE" | "OTHER";
+
+interface ApiPatient {
+  id: string;
+  code: string;
+  userId: string | null;
+  fullName: string;
+  birthDate: string | null;
+  gender: ApiGender | null;
+  phone: string | null;
+  occupation: string | null;
+  workplace: string | null;
+  exposureHistory: string | null;
+  riskFactors: string | null;
+  createdAt: string;
+}
+
+function toPatient(patient: ApiPatient): Patient {
+  return {
+    id: patient.id,
+    code: patient.code,
+    userId: patient.userId,
+    name: patient.fullName,
+    birthDate: patient.birthDate || "",
+    gender: (patient.gender?.toLowerCase() as Gender | undefined) || "",
+    phone: patient.phone || "",
+    occupation: patient.occupation || "",
+    workplace: patient.workplace || "",
+    exposureHistory: patient.exposureHistory || "",
+    riskFactors: patient.riskFactors || "",
+    createdAt: patient.createdAt,
+  };
+}
+
+/** PUT overwrites every field, so the whole form is always sent. */
+function toRequest(input: PatientInput) {
+  const blank = (value: string) => value.trim() || null;
+  return {
+    fullName: input.name.trim(),
+    birthDate: input.birthDate,
+    gender: input.gender ? input.gender.toUpperCase() : null,
+    phone: blank(input.phone),
+    occupation: input.occupation.trim(),
+    workplace: blank(input.workplace),
+    exposureHistory: blank(input.exposureHistory),
+    riskFactors: blank(input.riskFactors),
+  };
+}
 
 export const patientService = {
+  /** Admin only: every patient record. */
   async getPatients() {
-    await delay();
-    const database = readDatabase();
-    const user = requireUser(database);
-    return database.patients.filter(
-      (patient) => user.role !== "patient" || patient.id === user.patientId,
-    );
+    return (await apiAllPages<ApiPatient>("/api/patients")).map(toPatient);
+  },
+  /** Patient only: the record linked to the signed-in account. */
+  async getMine() {
+    return toPatient(await apiRequest<ApiPatient>("/api/patients/me"));
   },
   async getPatient(id: string) {
-    await delay();
-    const database = readDatabase();
-    requirePatientAccess(database, id);
-    return database.patients.find((entry) => entry.id === id)!;
+    return toPatient(await apiRequest<ApiPatient>(`/api/patients/${encodeURIComponent(id)}`));
   },
   async save(input: PatientInput, id?: string) {
-    await delay();
-    const database = readDatabase();
-    requireUser(database, ["admin"]);
     const message = validatePatient(input);
     if (message) throw new Error(message);
-    if (id) {
-      const patient = database.patients.find((entry) => entry.id === id);
-      if (!patient) throw new Error("Không tìm thấy bệnh nhân.");
-      Object.assign(patient, input, { name: input.name.trim() });
-      const user = database.users.find((entry) => entry.patientId === id);
-      if (user)
-        Object.assign(user, {
-          name: patient.name,
-          birthDate: patient.birthDate,
-          gender: patient.gender,
-          occupation: patient.occupation,
-        });
-      writeDatabase(database);
-      return patient;
-    }
-    const patient = {
-      ...input,
-      name: input.name.trim(),
-      id: createId("BN"),
-      createdAt: new Date().toISOString(),
-      clinicalRecords: [],
-    };
-    database.patients.unshift(patient);
-    writeDatabase(database);
-    return patient;
-  },
-  async saveClinicalRecords(id: string, records: ClinicalRecord[]) {
-    await delay();
-    const database = readDatabase();
-    const user = requirePatientAccess(database, id);
-    if (user.role === "admin") throw new Error("Quản trị viên không chỉnh sửa dữ liệu lâm sàng.");
-    const message = records.length ? validateClinicalRecords(records) : "";
-    if (message) throw new Error(message);
-    database.patients.find((entry) => entry.id === id)!.clinicalRecords = structuredClone(
-      records,
-    ).sort((a, b) => a.date.localeCompare(b.date));
-    writeDatabase(database);
+    const patient = await apiRequest<ApiPatient>(
+      id ? `/api/patients/${encodeURIComponent(id)}` : "/api/patients",
+      { method: id ? "PUT" : "POST", body: toRequest(input) },
+    );
+    return toPatient(patient);
   },
 };

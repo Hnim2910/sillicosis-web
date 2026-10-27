@@ -336,16 +336,6 @@
   height: auto;
   display: block;
 }
-.heatmap {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse at 34% 40%, #ef583dbb 0, #efb43d80 10%, transparent 23%),
-    radial-gradient(ellipse at 65% 37%, #ed7b35b3 0, #edc63566 9%, transparent 23%),
-    radial-gradient(ellipse at 64% 66%, #49b39677 0, transparent 19%);
-  mix-blend-mode: screen;
-}
 .viewer-controls {
   display: flex;
   align-items: center;
@@ -353,33 +343,6 @@
   gap: 10px;
   padding-top: 15px;
   flex-wrap: wrap;
-}
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #5d737e;
-  font-size: 12px;
-}
-.checkbox-label input {
-  accent-color: var(--primary);
-  width: 15px;
-  height: 15px;
-}
-.heatmap-legend {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 9px;
-  color: #8c9ca4;
-  margin-top: 13px;
-}
-.heatmap-legend > span {
-  display: block;
-  height: 5px;
-  width: 110px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #3c8ad4, #51b691, #ead549, #ea653e);
 }
 .result-label {
   font-size: 31px;

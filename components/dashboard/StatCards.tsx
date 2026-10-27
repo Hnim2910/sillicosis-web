@@ -1,45 +1,69 @@
-import { ClipboardCheck, Clock3, ScanLine, UsersRound } from "lucide-react";
+import { CircleAlert, ScanLine, ShieldCheck, TriangleAlert, UsersRound } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { Role } from "@/types/user";
+import type { VisitOutcome } from "@/types/visit";
 import { Card } from "@/components/common/Card";
 
 export function StatCards({
+  role,
   patients,
-  predictions,
-  reviewed,
-  pending,
+  visits,
+  counts,
 }: {
+  role: Role;
   patients: number;
-  predictions: number;
-  reviewed: number;
-  pending: number;
+  visits: number;
+  counts: Record<VisitOutcome, number>;
 }) {
-  const items = [
+  const items: {
+    label: string;
+    value: number;
+    caption: string;
+    icon: LucideIcon;
+    color: string;
+  }[] = [
+    ...(role === "admin"
+      ? [
+          {
+            label: "Hồ sơ bệnh nhân",
+            value: patients,
+            caption: "Tổng số hồ sơ trong hệ thống",
+            icon: UsersRound,
+            color: "",
+          },
+        ]
+      : []),
     {
-      label: "Hồ sơ bệnh nhân",
-      value: patients,
-      caption: "Hồ sơ trong phạm vi truy cập",
-      icon: UsersRound,
-      color: "",
-    },
-    {
-      label: "Lượt phân tích",
-      value: predictions,
-      caption: "Đã lưu vào lịch sử",
+      label: "Lượt khám",
+      value: visits,
+      caption: role === "admin" ? "Của mọi bệnh nhân" : "Đã lưu vào lịch sử",
       icon: ScanLine,
       color: "blue",
     },
     {
-      label: "Đã đánh giá",
-      value: reviewed,
-      caption: "Đã được quản trị viên đánh giá",
-      icon: ClipboardCheck,
-      color: "purple",
-    },
-    {
-      label: "Chờ đánh giá",
-      value: pending,
-      caption: "Chờ quản trị viên đánh giá",
-      icon: Clock3,
+      label: "Nghi bụi phổi silic",
+      value: counts.Co,
+      caption: "Theo kết quả AI gần nhất của mỗi lượt",
+      icon: TriangleAlert,
       color: "amber",
+    },
+    ...(role === "admin"
+      ? []
+      : [
+          {
+            label: "Không phát hiện",
+            value: counts.Khong,
+            caption: "Theo kết quả AI gần nhất của mỗi lượt",
+            icon: ShieldCheck,
+            color: "",
+          },
+        ]),
+    {
+      label: "Lỗi / chưa dự đoán",
+      value: counts.FAILED + counts.NONE,
+      caption: "Cần chạy lại dự đoán",
+      icon: CircleAlert,
+      color: "purple",
     },
   ];
   return (

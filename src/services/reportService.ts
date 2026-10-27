@@ -1,12 +1,15 @@
-import type { Patient } from "@/types/patient";
-import type { Prediction } from "@/types/prediction";
-import { RESULT_NOTICE, REVIEW_LABELS } from "@/constants/app";
+import type { Visit } from "@/types/visit";
+import { MODEL_SCOPE_NOTICE, OUTCOME_LABELS, RESULT_NOTICE } from "@/constants/app";
 import { formatDate } from "@/utils/format";
+import { clinicalRows, formatPercent } from "@/utils/visitDisplay";
 import { loadImage } from "@/services/imageService";
 import { wrapText } from "@/utils/wrapText";
 
 export const reportService = {
-  async download(record: Prediction, patient: Patient) {
+  /** `imageUrl`: object URL of the visit's X-ray (see useImageUrl). Only for a successful prediction. */
+  async download(visit: Visit, imageUrl: string) {
+    const prediction = visit.latestPrediction;
+    if (prediction?.status !== "SUCCESS") throw new Error("Lượt khám chưa có kết quả dự đoán.");
     const { jsPDF } = await import("jspdf");
     await document.fonts.ready;
     const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
@@ -27,7 +30,7 @@ export const reportService = {
     function savePage() {
       ctx!.font = "18px Arial";
       ctx!.fillStyle = "#85949d";
-      ctx!.fillText(`SilicoCare · Dữ liệu minh họa · Trang ${page}`, 70, 1708);
+      ctx!.fillText(`SilicoCare · Kết quả thử nghiệm · Trang ${page}`, 70, 1708);
       if (page > 1) pdf.addPage();
       pdf.addImage(canvas.toDataURL("image/png"), "PNG", 0, 0, 210, 297);
       page += 1;
@@ -50,23 +53,22 @@ export const reportService = {
     startPage();
     line("SILICOCARE", 23, true);
     y += 15;
-    line("BÁO CÁO SÀNG LỌC BỤI PHỔI SILIC", 34, true);
-    line("BẢN DEMO · KHÔNG PHẢI KẾT QUẢ CHẨN ĐOÁN", 20);
+    line("BÁO CÁO SÀNG LỌC BỤI PHỔI SILIC (THỬ NGHIỆM)", 34, true);
+    line("KẾT QUẢ CỦA MÔ HÌNH AI · KHÔNG PHẢI KẾT QUẢ CHẨN ĐOÁN", 20);
     y += 20;
-    line(`Bệnh nhân: ${patient.name} · ${patient.id}`);
+    line(`Bệnh nhân: ${visit.patient.fullName} · ${visit.patient.code}`);
+    line(`Ngày khám: ${formatDate(visit.visitDate)}`);
     line(
-      `Ngày sinh: ${formatDate(patient.birthDate)} · Nghề nghiệp: ${patient.occupation || "Chưa cập nhật"}`,
-    );
-    line(`Bản ghi: ${record.id} · Thời gian: ${formatDate(record.createdAt, true)}`);
-    line(`Người thực hiện: ${record.performedBy}`);
-    line(
-      `Kết quả mô phỏng: ${record.label} · Độ tin cậy: ${record.confidence.toFixed(1)}%`,
+      `Kết quả: ${OUTCOME_LABELS[prediction.label === "Co" ? "Co" : "Khong"]} · Xác suất bụi phổi silic: ${formatPercent(prediction.probability ?? 0)} (ngưỡng ${formatPercent(prediction.threshold ?? 0)})`,
       26,
       true,
     );
-    line(`Mô hình: ${record.modelVersion}`, 20);
+    line(
+      `Mô hình: ${prediction.modelName || "Không rõ"} · Phiên bản ${prediction.modelVersion} · Dự đoán lúc ${formatDate(prediction.createdAt, true)}`,
+      20,
+    );
     y += 15;
-    const image = await loadImage(record.image.url);
+    const image = await loadImage(imageUrl);
     const ratio = Math.min(460 / image.naturalWidth, 440 / image.naturalHeight);
     const width = image.naturalWidth * ratio,
       height = image.naturalHeight * ratio;
@@ -76,21 +78,15 @@ export const reportService = {
     }
     ctx.drawImage(image, 72, y, width, height);
     y += height + 35;
-    line("Dữ liệu theo thời gian đã sử dụng", 25, true);
-    for (const row of record.clinicalRecords)
-      line(
-        `${formatDate(row.date)} | Phơi nhiễm: ${row.exposureYears} năm | Bụi: ${row.dustLevel} mg/m³ | FVC: ${row.fvc}% | FEV1: ${row.fev1}%`,
-        21,
-      );
-    y += 15;
-    if (record.review) {
-      line(`Đánh giá đã lưu: ${REVIEW_LABELS[record.review.decision]}`, 24, true);
-      line(`${record.review.doctorName} · ${formatDate(record.review.reviewedAt, true)}`, 20);
-      line(record.review.note, 22);
-    }
+    const rows = clinicalRows(visit);
+    line("Thông tin lượt khám (lưu để theo dõi, mô hình không sử dụng)", 25, true);
+    if (!rows.length) line("Không nhập chỉ số lâm sàng.", 21);
+    for (const [label, value] of rows) line(`${label}: ${value}`, 21);
     y += 20;
+    line(prediction.disclaimer, 20, true);
+    line(MODEL_SCOPE_NOTICE, 20);
     line(RESULT_NOTICE, 20);
     savePage();
-    pdf.save(`SilicoCare-${record.id}.pdf`);
+    pdf.save(`SilicoCare-${visit.patient.code}-${visit.visitDate}.pdf`);
   },
 };

@@ -23,7 +23,7 @@ export function UserManagement() {
   const [query, setQuery] = useState("");
   const [role, setRole] = useState("");
   const [status, setStatus] = useState("");
-  const [edit, setEdit] = useState<User | null | undefined>();
+  const [creating, setCreating] = useState(false);
   const [confirm, setConfirm] = useState<{
     user: User;
     action: "lock" | "unlock" | "delete";
@@ -46,11 +46,11 @@ export function UserManagement() {
     <>
       <PageHeader
         title="Quản lý tài khoản"
-        description="Quản lý người dùng, trạng thái hoạt động và quyền truy cập."
+        description="Tạo tài khoản bệnh nhân, khoá/mở khoá hoặc xoá tài khoản."
         action={
-          <Button onClick={() => setEdit(null)}>
+          <Button onClick={() => setCreating(true)}>
             <Plus size={17} />
-            Thêm người dùng
+            Thêm bệnh nhân
           </Button>
         }
       />
@@ -102,7 +102,6 @@ export function UserManagement() {
           <UserTable
             users={users}
             currentUserId={currentUser?.id || ""}
-            onEdit={setEdit}
             onAction={(user, action) => {
               setConfirm({ user, action });
               setActionError("");
@@ -114,18 +113,12 @@ export function UserManagement() {
           <span>Không thể tự khóa hoặc xóa tài khoản đang dùng</span>
         </div>
       </Card>
-      <Modal
-        open={edit !== undefined}
-        title={edit ? "Cập nhật người dùng" : "Thêm người dùng"}
-        onClose={() => setEdit(undefined)}
-      >
+      <Modal open={creating} title="Thêm tài khoản bệnh nhân" onClose={() => setCreating(false)}>
         <AccountForm
-          user={edit || undefined}
-          currentUserId={currentUser?.id || ""}
-          onCancel={() => setEdit(undefined)}
+          onCancel={() => setCreating(false)}
           onSaved={() => {
-            setEdit(undefined);
-            setMessage("Đã lưu tài khoản người dùng.");
+            setCreating(false);
+            setMessage("Đã tạo tài khoản bệnh nhân.");
             void reload();
           }}
         />
@@ -149,7 +142,8 @@ export function UserManagement() {
           </p>
           {confirm?.action === "delete" && (
             <p className="notice">
-              Hồ sơ y tế và các bản ghi dự đoán liên quan vẫn được lưu để tra cứu.
+              Tài khoản bị vô hiệu và không đăng nhập được nữa; hồ sơ bệnh nhân và các lượt khám vẫn
+              được lưu để tra cứu.
             </p>
           )}
           <div className="form-actions">

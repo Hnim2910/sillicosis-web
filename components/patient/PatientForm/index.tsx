@@ -22,7 +22,7 @@ export function PatientForm({
     patient || {
       name: "",
       birthDate: "",
-      gender: "male",
+      gender: "",
       phone: "",
       occupation: "",
       workplace: "",
@@ -61,6 +61,7 @@ export function PatientForm({
           value={form.name}
           onChange={change("name")}
           minLength={2}
+          maxLength={150}
         />
         <Input
           label="Ngày sinh"
@@ -72,6 +73,7 @@ export function PatientForm({
           onChange={change("birthDate")}
         />
         <Select label="Giới tính" value={form.gender} onChange={change("gender")}>
+          <option value="">Chưa cập nhật</option>
           {Object.entries(GENDER_LABELS).map(([key, label]) => (
             <option key={key} value={key}>
               {label}
@@ -82,17 +84,29 @@ export function PatientForm({
         <Input
           label="Nghề nghiệp"
           required
+          maxLength={150}
           value={form.occupation}
           onChange={change("occupation")}
         />
-        <Input label="Nơi làm việc" value={form.workplace} onChange={change("workplace")} />
+        <Input
+          label="Nơi làm việc"
+          maxLength={255}
+          value={form.workplace}
+          onChange={change("workplace")}
+        />
       </div>
       <Textarea
         label="Tiền sử tiếp xúc bụi"
+        maxLength={2000}
         value={form.exposureHistory}
         onChange={change("exposureHistory")}
       />
-      <Textarea label="Yếu tố nguy cơ" value={form.riskFactors} onChange={change("riskFactors")} />
+      <Textarea
+        label="Yếu tố nguy cơ"
+        maxLength={2000}
+        value={form.riskFactors}
+        onChange={change("riskFactors")}
+      />
       <div className="form-actions">
         <Button variant="secondary" onClick={onCancel} disabled={busy}>
           Hủy

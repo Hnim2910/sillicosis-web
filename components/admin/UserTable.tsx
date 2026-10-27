@@ -1,4 +1,4 @@
-import { LockKeyhole, LockKeyholeOpen, Pencil, Trash2 } from "lucide-react";
+import { LockKeyhole, LockKeyholeOpen, Trash2 } from "lucide-react";
 import type { User } from "@/types/user";
 import { ROLE_LABELS } from "@/constants/app";
 import { initials } from "@/utils/format";
@@ -9,18 +9,16 @@ import { Button } from "@/components/common/Button";
 export function UserTable({
   users,
   currentUserId,
-  onEdit,
   onAction,
 }: {
   users: User[];
   currentUserId: string;
-  onEdit: (user: User) => void;
   onAction: (user: User, action: "lock" | "unlock" | "delete") => void;
 }) {
   return (
     <Table
       caption="Danh sách tài khoản người dùng"
-      headers={["Người dùng", "Liên hệ", "Vai trò", "Trạng thái", "Thao tác"]}
+      headers={["Người dùng", "Số điện thoại", "Vai trò", "Trạng thái", "Thao tác"]}
     >
       {users.map((user) => (
         <tr key={user.id}>
@@ -32,14 +30,11 @@ export function UserTable({
                   {user.name}
                   {user.id === currentUserId && " (Bạn)"}
                 </strong>
-                <small>{user.id}</small>
+                <small>{user.email}</small>
               </div>
             </div>
           </td>
-          <td>
-            {user.email || "Chưa có email"}
-            <small className="block text-slate-400">{user.phone || "Chưa có số điện thoại"}</small>
-          </td>
+          <td>{user.phone || "Chưa có số điện thoại"}</td>
           <td>{ROLE_LABELS[user.role]}</td>
           <td>
             <Badge tone={user.active ? "success" : "danger"}>
@@ -48,13 +43,6 @@ export function UserTable({
           </td>
           <td>
             <div className="flex gap-1">
-              <Button
-                variant="ghost"
-                aria-label={`Sửa tài khoản ${user.name}`}
-                onClick={() => onEdit(user)}
-              >
-                <Pencil size={15} />
-              </Button>
               <Button
                 variant="ghost"
                 aria-label={`${user.active ? "Khóa" : "Mở khóa"} tài khoản ${user.name}`}

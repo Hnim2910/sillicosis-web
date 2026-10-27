@@ -1,18 +1,10 @@
 import type { Gender } from "@/types/user";
 
-export interface ClinicalRecord {
-  id: string;
-  date: string;
-  exposureYears: number;
-  dustLevel: number;
-  fvc: number;
-  fev1: number;
-}
-
 export interface PatientInput {
   name: string;
   birthDate: string;
-  gender: Gender;
+  /** Empty when the record has no gender yet. */
+  gender: Gender | "";
   phone: string;
   occupation: string;
   workplace: string;
@@ -22,6 +14,9 @@ export interface PatientInput {
 
 export interface Patient extends PatientInput {
   id: string;
+  /** Human-readable code such as BN-000001. */
+  code: string;
+  /** Linked account; null for records an admin created without one. */
+  userId: string | null;
   createdAt: string;
-  clinicalRecords: ClinicalRecord[];
 }

@@ -16,7 +16,7 @@ export function PatientTable({
   return (
     <Table
       caption="Danh sách hồ sơ bệnh nhân"
-      headers={["Bệnh nhân", "Ngày sinh", "Giới tính", "Nghề nghiệp", "Mốc theo dõi", "Thao tác"]}
+      headers={["Bệnh nhân", "Ngày sinh", "Giới tính", "Nghề nghiệp", "Tài khoản", "Thao tác"]}
     >
       {patients.map((patient) => (
         <tr key={patient.id}>
@@ -27,14 +27,14 @@ export function PatientTable({
                 <Link href={`/patients/${patient.id}`}>
                   <strong>{patient.name}</strong>
                 </Link>
-                <small>{patient.id}</small>
+                <small>{patient.code}</small>
               </div>
             </div>
           </td>
           <td>{formatDate(patient.birthDate)}</td>
-          <td>{GENDER_LABELS[patient.gender]}</td>
+          <td>{patient.gender ? GENDER_LABELS[patient.gender] : "—"}</td>
           <td>{patient.occupation || "Chưa cập nhật"}</td>
-          <td>{patient.clinicalRecords.length} mốc</td>
+          <td>{patient.userId ? "Đã liên kết" : "Chưa có"}</td>
           <td>
             <div className="flex items-center gap-2">
               <Link

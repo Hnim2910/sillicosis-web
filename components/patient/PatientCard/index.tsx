@@ -9,7 +9,7 @@ export function PatientCard({ patient }: { patient: Patient }) {
       <div className="patient-identity">
         <span className="avatar">{initials(patient.name)}</span>
         <h2>{patient.name}</h2>
-        <p>{patient.id}</p>
+        <p>{patient.code}</p>
       </div>
       <div className="card-body">
         <dl className="info-list">
@@ -19,7 +19,7 @@ export function PatientCard({ patient }: { patient: Patient }) {
           </div>
           <div>
             <dt>Giới tính</dt>
-            <dd>{GENDER_LABELS[patient.gender]}</dd>
+            <dd>{patient.gender ? GENDER_LABELS[patient.gender] : "Chưa cập nhật"}</dd>
           </div>
           <div className="full">
             <dt>Số điện thoại</dt>

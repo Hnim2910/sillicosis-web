@@ -5,7 +5,10 @@ export function ResultDistribution({ normal, silicosis }: { normal: number; sili
   const total = normal + silicosis;
   return (
     <Card>
-      <CardHeader title="Phân bố kết quả" description="Tất cả các lần phân tích đã lưu" />
+      <CardHeader
+        title="Phân bố kết quả"
+        description="Các lượt khám đã dự đoán thành công (kết quả gần nhất)"
+      />
       {!total ? (
         <EmptyState description="Biểu đồ xuất hiện sau lần dự đoán đầu tiên." />
       ) : (
@@ -13,26 +16,26 @@ export function ResultDistribution({ normal, silicosis }: { normal: number; sili
           <div
             className="donut"
             role="img"
-            aria-label={`${normal} Normal, ${silicosis} Silicosis, tổng ${total}`}
+            aria-label={`${normal} không phát hiện, ${silicosis} nghi bụi phổi silic, tổng ${total}`}
             style={{
               background: `conic-gradient(#3a9d89 0 ${(normal / total) * 100}%, #ebbc74 ${(normal / total) * 100}% 100%)`,
             }}
           >
             <div className="donut-center">
               <strong>{total}</strong>
-              <span>LƯỢT PHÂN TÍCH</span>
+              <span>LƯỢT DỰ ĐOÁN</span>
             </div>
           </div>
           <div className="legend">
             <div className="legend-item">
               <span className="legend-dot bg-teal-600" />
-              Normal<strong>{normal}</strong>
+              Không phát hiện<strong>{normal}</strong>
             </div>
             <div className="legend-item">
               <span className="legend-dot bg-amber-300" />
-              Silicosis<strong>{silicosis}</strong>
+              Nghi bụi phổi silic<strong>{silicosis}</strong>
             </div>
-            <p className="notice">Kết quả mô phỏng</p>
+            <p className="notice">Kết quả thử nghiệm của mô hình AI</p>
           </div>
         </div>
       )}

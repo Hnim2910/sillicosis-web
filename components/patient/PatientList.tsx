@@ -25,7 +25,7 @@ export function PatientList() {
   const [success, setSuccess] = useState("");
   const patients =
     data?.filter((patient) =>
-      searchText(`${patient.name} ${patient.id} ${patient.phone} ${patient.occupation}`).includes(
+      searchText(`${patient.name} ${patient.code} ${patient.phone} ${patient.occupation}`).includes(
         searchText(query),
       ),
     ) || [];
@@ -33,7 +33,7 @@ export function PatientList() {
     <>
       <PageHeader
         title="Hồ sơ bệnh nhân"
-        description="Quản lý thông tin, tiền sử nghề nghiệp và dữ liệu theo dõi."
+        description="Quản lý thông tin, tiền sử nghề nghiệp và các lượt khám của bệnh nhân."
         action={
           editable && (
             <Button onClick={() => setEditing(null)}>
@@ -79,7 +79,7 @@ export function PatientList() {
           <PatientTable patients={patients} onEdit={editable ? setEditing : undefined} />
         )}
         <div className="table-footer">
-          Hiển thị {patients.length} / {data?.length ?? 0} hồ sơ<span>Dữ liệu minh họa</span>
+          Hiển thị {patients.length} / {data?.length ?? 0} hồ sơ
         </div>
       </Card>
       <Modal

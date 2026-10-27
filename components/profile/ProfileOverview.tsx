@@ -1,37 +1,67 @@
 "use client";
-import { useCallback } from "react";
+import { useState } from "react";
+import { Pencil } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAsync } from "@/hooks/useAsync";
 import { patientService } from "@/services/patientService";
+import { ApiError } from "@/lib/apiClient";
 import { ROLE_LABELS } from "@/constants/app";
 import { PASSWORD_RULE } from "@/utils/validation";
 import { Card, CardHeader } from "@/components/common/Card";
 import { PageHeader } from "@/components/common/PageHeader";
+import { Button } from "@/components/common/Button";
 import { Loading } from "@/components/common/Loading";
+import { Modal } from "@/components/common/Modal";
 import { ErrorState } from "@/components/common/Feedback";
-import { PatientClinicalEditor } from "@/components/patient/PatientDetail";
+import { PatientCard } from "@/components/patient/PatientCard";
+import { PatientForm } from "@/components/patient/PatientForm";
 import { ProfileForm } from "./ProfileForm";
 import { PasswordForm } from "./PasswordForm";
 
-function OwnClinicalRecords({ patientId }: { patientId: string }) {
-  const loader = useCallback(() => patientService.getPatient(patientId), [patientId]);
-  const { data, loading, error, reload } = useAsync(loader);
+async function loadMine() {
+  try {
+    return await patientService.getMine();
+  } catch (reason) {
+    if (reason instanceof ApiError && reason.code === "PATIENT_NOT_FOUND") return null;
+    throw reason;
+  }
+}
+
+/** The patient record linked to this account (used for visits), separate from the account profile. */
+function OwnPatientRecord() {
+  const { data, loading, error, reload } = useAsync(loadMine);
+  const [editing, setEditing] = useState(false);
+  if (loading) return <Loading />;
+  if (error) return <ErrorState message={error} retry={reload} />;
+  if (!data)
+    return (
+      <Card>
+        <CardHeader title="Hồ sơ bệnh nhân" />
+        <div className="card-body">
+          <p className="notice">Tài khoản này chưa được liên kết với hồ sơ bệnh nhân.</p>
+        </div>
+      </Card>
+    );
   return (
-    <Card>
-      <CardHeader
-        title="Dữ liệu theo dõi của tôi"
-        description="Các mốc dữ liệu được dùng khi thực hiện dự đoán."
-      />
-      <div className="card-body">
-        {loading ? (
-          <Loading />
-        ) : error ? (
-          <ErrorState message={error} retry={reload} />
-        ) : (
-          data && <PatientClinicalEditor patient={data} />
-        )}
+    <>
+      <div className="flex justify-end">
+        <Button variant="secondary" onClick={() => setEditing(true)}>
+          <Pencil size={15} />
+          Cập nhật hồ sơ bệnh nhân
+        </Button>
       </div>
-    </Card>
+      <PatientCard patient={data} />
+      <Modal open={editing} title="Cập nhật hồ sơ bệnh nhân" onClose={() => setEditing(false)}>
+        <PatientForm
+          patient={data}
+          onCancel={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            void reload();
+          }}
+        />
+      </Modal>
+    </>
   );
 }
 
@@ -48,7 +78,7 @@ export function ProfileOverview() {
         <div className="prediction-grid">
           <Card>
             <CardHeader
-              title="Thông tin cá nhân"
+              title="Thông tin tài khoản"
               description="Cập nhật thông tin liên hệ và nghề nghiệp."
             />
             <div className="card-body">
@@ -62,9 +92,7 @@ export function ProfileOverview() {
             </div>
           </Card>
         </div>
-        {user.role === "patient" && user.patientId && (
-          <OwnClinicalRecords patientId={user.patientId} />
-        )}
+        {user.role === "patient" && <OwnPatientRecord />}
       </div>
     </>
   );

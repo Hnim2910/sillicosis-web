@@ -1,33 +1,159 @@
 "use client";
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Download, ScanLine } from "lucide-react";
+import { ArrowLeft, Download, RefreshCw, ScanLine } from "lucide-react";
 import { useAsync } from "@/hooks/useAsync";
-import { useAuth } from "@/contexts/AuthContext";
-import { predictionService } from "@/services/predictionService";
+import { useImageUrl } from "@/hooks/useImageUrl";
+import { visitService } from "@/services/visitService";
 import { reportService } from "@/services/reportService";
-import { RESULT_NOTICE, REVIEW_LABELS } from "@/constants/app";
+import type { Prediction, Visit } from "@/types/visit";
+import { MODEL_SCOPE_NOTICE, OUTCOME_LABELS, RESULT_NOTICE } from "@/constants/app";
 import { errorMessage, formatDate } from "@/utils/format";
+import { clinicalRows, formatPercent, predictionErrorText } from "@/utils/visitDisplay";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Button } from "@/components/common/Button";
 import { Card, CardHeader } from "@/components/common/Card";
 import { Badge } from "@/components/common/Badge";
 import { Loading } from "@/components/common/Loading";
 import { Alert, ErrorState } from "@/components/common/Feedback";
-import { ClinicalTable } from "@/components/patient/ClinicalRecords/ClinicalTable";
 import { XrayViewer } from "@/components/prediction/XrayViewer";
 
+function PredictionDetail({ prediction }: { prediction: Prediction }) {
+  const probability = prediction.probability ?? 0;
+  const threshold = prediction.threshold ?? 0;
+  const positive = prediction.label === "Co";
+  return (
+    <>
+      <div className={`result-label ${positive ? "silicosis" : "normal"}`}>
+        {OUTCOME_LABELS[positive ? "Co" : "Khong"]}
+      </div>
+      <p className="notice mt-2">
+        {positive
+          ? "Xác suất mô hình đưa ra đạt hoặc vượt ngưỡng, ảnh được xếp vào nhóm nghi bụi phổi silic."
+          : "Xác suất mô hình đưa ra thấp hơn ngưỡng, ảnh không được xếp vào nhóm nghi bụi phổi silic."}
+      </p>
+      <div className="confidence-detail">
+        <span>Xác suất bụi phổi silic (ngưỡng {formatPercent(threshold)})</span>
+        <strong className="text-teal-700">{formatPercent(probability)}</strong>
+      </div>
+      <div className="confidence-bar">
+        <div style={{ width: `${Math.round(probability * 1000) / 10}%` }} />
+      </div>
+      <div className="result-meta">
+        <div>
+          <span>Mô hình</span>
+          <p>{prediction.modelName || "Không rõ"}</p>
+        </div>
+        <div>
+          <span>Phiên bản</span>
+          <p>{prediction.modelVersion}</p>
+        </div>
+        <div>
+          <span>Thời gian dự đoán</span>
+          <p>{formatDate(prediction.createdAt, true)}</p>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ResultCard({
+  visit,
+  onPredicted,
+}: {
+  visit: Visit;
+  onPredicted: (p: Prediction) => void;
+}) {
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState("");
+  const prediction = visit.latestPrediction;
+  async function run() {
+    setRunning(true);
+    setError("");
+    try {
+      onPredicted(await visitService.predict(visit.id));
+    } catch (reason) {
+      setError(errorMessage(reason));
+    } finally {
+      setRunning(false);
+    }
+  }
+  const runButton = (label: string) => (
+    <Button variant="secondary" busy={running} onClick={run}>
+      <RefreshCw size={16} />
+      {running ? "Đang phân tích ảnh…" : label}
+    </Button>
+  );
+  return (
+    <Card>
+      <CardHeader
+        title="Kết quả thử nghiệm"
+        action={<ScanLine size={20} className="text-teal-600" />}
+      />
+      <div className="card-body stack">
+        {error && <Alert>{error}</Alert>}
+        {!visit.image ? (
+          <p className="notice">Lượt khám này chưa có ảnh X-quang nên chưa thể dự đoán.</p>
+        ) : !prediction ? (
+          <>
+            <p className="notice">Ảnh của lượt khám này chưa được phân tích.</p>
+            {runButton("Chạy dự đoán")}
+          </>
+        ) : prediction.status === "FAILED" ? (
+          <>
+            <Alert>{predictionErrorText(prediction)}</Alert>
+            <small className="text-slate-400">
+              Lần thử gần nhất: {formatDate(prediction.createdAt, true)}
+            </small>
+            {runButton("Thử lại")}
+          </>
+        ) : (
+          <PredictionDetail prediction={prediction} />
+        )}
+        {prediction?.status === "SUCCESS" && (
+          <Alert tone="info">
+            {prediction.disclaimer} {MODEL_SCOPE_NOTICE}
+          </Alert>
+        )}
+      </div>
+    </Card>
+  );
+}
+
+function XrayCard({ visit, image }: { visit: Visit; image: ReturnType<typeof useImageUrl> }) {
+  return (
+    <Card>
+      <CardHeader
+        title="Ảnh X-quang"
+        description={`Lượt khám ngày ${formatDate(visit.visitDate)}`}
+      />
+      <div className="card-body">
+        {!visit.image ? (
+          <p className="notice">Chưa có ảnh.</p>
+        ) : image.error ? (
+          <Alert>{image.error}</Alert>
+        ) : image.loading ? (
+          <Loading />
+        ) : (
+          <XrayViewer src={image.url} width={visit.image.width} height={visit.image.height} />
+        )}
+      </div>
+    </Card>
+  );
+}
+
 export function PredictionResult({ id }: { id: string }) {
-  const loader = useCallback(() => predictionService.get(id), [id]);
-  const { data, loading, error, reload } = useAsync(loader);
-  const { user } = useAuth();
+  const loader = useCallback(() => visitService.get(id), [id]);
+  const { data: visit, loading, error, reload, setData } = useAsync(loader);
+  const image = useImageUrl(visit?.image?.id);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState("");
   const [message, setMessage] = useState("");
   if (loading) return <Loading />;
-  if (error || !data)
-    return <ErrorState message={error || "Không có dữ liệu kết quả."} retry={reload} />;
-  const { prediction: record, patient } = data;
+  if (error || !visit)
+    return <ErrorState message={error || "Không có dữ liệu lượt khám."} retry={reload} />;
+  const rows = clinicalRows(visit);
+  const succeeded = visit.latestPrediction?.status === "SUCCESS";
   return (
     <>
       <Link href="/history" className="text-link mb-5">
@@ -36,16 +162,19 @@ export function PredictionResult({ id }: { id: string }) {
       </Link>
       <PageHeader
         title="Kết quả phân tích"
-        description={`${patient.name} · ${record.id} · ${formatDate(record.createdAt, true)}`}
+        description={`${visit.patient.fullName} · ${visit.patient.code} · Ngày khám ${formatDate(visit.visitDate)}`}
         action={
           <Button
             variant="secondary"
             busy={exporting}
+            disabled={!succeeded || !image.url}
+            title={succeeded ? undefined : "Chỉ xuất báo cáo khi đã có kết quả dự đoán."}
             onClick={async () => {
               setExporting(true);
               setExportError("");
+              setMessage("");
               try {
-                await reportService.download(record, patient);
+                await reportService.download(visit, image.url);
                 setMessage("Đã tạo báo cáo PDF và gửi tới trình tải xuống.");
               } catch (reason) {
                 setExportError(errorMessage(reason));
@@ -63,84 +192,34 @@ export function PredictionResult({ id }: { id: string }) {
         {message && <Alert tone="success">{message}</Alert>}
         {exportError && <Alert>{exportError}</Alert>}
         <div className="prediction-grid">
-          <Card>
-            <CardHeader
-              title="Ảnh X-quang"
-              description={record.image.name}
-              action={<Badge tone="neutral">Demo</Badge>}
-            />
-            <div className="card-body">
-              <XrayViewer image={record.image} />
-            </div>
-          </Card>
-          <div className="stack">
-            <Card>
-              <CardHeader
-                title="Kết quả mô phỏng"
-                action={<ScanLine size={20} className="text-teal-600" />}
-              />
-              <div className="card-body">
-                <div className={`result-label ${record.label.toLowerCase()}`}>{record.label}</div>
-                <p className="notice mt-2">
-                  {record.label === "Silicosis"
-                    ? "Mô phỏng dữ liệu thuộc lớp Silicosis."
-                    : "Mô phỏng dữ liệu thuộc lớp Normal."}
-                </p>
-                <div className="confidence-detail">
-                  <span>Độ tin cậy mô phỏng</span>
-                  <strong className="text-teal-700">{record.confidence.toFixed(1)}%</strong>
-                </div>
-                <div className="confidence-bar">
-                  <div style={{ width: `${record.confidence}%` }} />
-                </div>
-                <div className="result-meta">
-                  <div>
-                    <span>Phiên bản mô hình</span>
-                    <p>{record.modelVersion}</p>
-                  </div>
-                  <div>
-                    <span>Người thực hiện</span>
-                    <p>{record.performedBy}</p>
-                  </div>
-                </div>
-                <div className="mt-5">
-                  <Alert tone="info">{RESULT_NOTICE}</Alert>
-                </div>
-              </div>
-            </Card>
-            {record.review && (
-              <Card>
-                <CardHeader title="Đánh giá đã lưu" description="Thông tin đánh giá từ hồ sơ trước đây." />
-                <div className="card-body review-summary">
-                  <p className="font-semibold mb-2">{REVIEW_LABELS[record.review.decision]}</p>
-                  <p>{record.review.note}</p>
-                  <small>{record.review.doctorName} · {formatDate(record.review.reviewedAt, true)}</small>
-                </div>
-              </Card>
-            )}
-          </div>
+          <XrayCard visit={visit} image={image} />
+          <ResultCard
+            visit={visit}
+            onPredicted={(prediction) => setData({ ...visit, latestPrediction: prediction })}
+          />
         </div>
         <Card>
           <CardHeader
-            title="Dữ liệu đầu vào theo thời gian"
-            description={`${record.clinicalRecords.length} mốc · Bản chụp dữ liệu tại thời điểm dự đoán`}
+            title="Thông tin lượt khám"
+            description="Được lưu để theo dõi; mô hình không dùng các chỉ số này."
+            action={<Badge tone="neutral">{rows.length} chỉ số</Badge>}
           />
-          <ClinicalTable records={record.clinicalRecords} />
+          <div className="card-body">
+            {rows.length ? (
+              <dl className="info-list">
+                {rows.map(([label, value]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : (
+              <p className="notice">Lượt khám này không nhập chỉ số lâm sàng.</p>
+            )}
+          </div>
         </Card>
-        {user?.role === "admin" && (
-          <Card>
-            <CardHeader
-              title="Ghi chú quản trị"
-              description={`Đánh giá mô hình: ${{ unreviewed: "Chưa đánh giá", correct: "Đúng", incorrect: "Sai" }[record.evaluation]}`}
-            />
-            <div className="card-body">
-              <p>{record.adminNote || "Chưa có ghi chú."}</p>
-              <Link href="/admin/records" className="text-link mt-4">
-                Quản lý bản ghi
-              </Link>
-            </div>
-          </Card>
-        )}
+        <p className="notice">{RESULT_NOTICE}</p>
       </div>
     </>
   );

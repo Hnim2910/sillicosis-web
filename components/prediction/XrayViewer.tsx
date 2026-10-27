@@ -2,11 +2,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import { Minus, Plus, RotateCcw } from "lucide-react";
-import type { XrayImage } from "@/types/prediction";
 import { Button } from "@/components/common/Button";
 
-export function XrayViewer({ image }: { image: XrayImage }) {
-  const [heatmap, setHeatmap] = useState(false);
+export function XrayViewer({ src, width, height }: { src: string; width: number; height: number }) {
   const [zoom, setZoom] = useState(1);
   return (
     <div>
@@ -19,29 +17,18 @@ export function XrayViewer({ image }: { image: XrayImage }) {
           style={{ width: `${zoom * 100}%`, maxWidth: zoom > 1 ? "none" : "100%" }}
         >
           <Image
-            src={image.url}
-            width={image.width}
-            height={image.height}
-            alt="Ảnh X-quang của bản ghi"
+            src={src}
+            width={width}
+            height={height}
+            alt="Ảnh X-quang của lượt khám"
             unoptimized
           />
-          {heatmap && (
-            <div
-              className="heatmap"
-              aria-label="Lớp bản đồ nhiệt minh họa, không phải kết quả AI"
-            />
-          )}
         </div>
       </div>
       <div className="viewer-controls">
-        <label className="checkbox-label">
-          <input
-            type="checkbox"
-            checked={heatmap}
-            onChange={(event) => setHeatmap(event.target.checked)}
-          />
-          Xem giải thích XAI
-        </label>
+        <span className="text-xs text-slate-400">
+          {width} × {height} px
+        </span>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -65,19 +52,6 @@ export function XrayViewer({ image }: { image: XrayImage }) {
           </Button>
         </div>
       </div>
-      {heatmap && (
-        <>
-          <div className="heatmap-legend">
-            Ảnh hưởng thấp
-            <span />
-            Cao
-          </div>
-          <p className="notice mt-2">
-            Heatmap minh họa cố định để demo giao diện, không thể hiện phân tích hay vị trí bệnh
-            trên ảnh.
-          </p>
-        </>
-      )}
     </div>
   );
 }

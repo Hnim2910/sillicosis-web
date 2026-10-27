@@ -36,8 +36,6 @@ export function toUser(user: ApiUser): User {
     phone: user.phone || "",
     role: ROLE_FROM_API[user.role],
     active: user.enabled,
-    // Backend accounts are not linked to a patient record yet.
-    patientId: undefined,
     birthDate: user.birthDate || "",
     gender: (user.gender?.toLowerCase() as Gender | undefined) || "",
     occupation: user.occupation || "",

@@ -33,7 +33,7 @@ export function Header({ onMenu }: { onMenu: () => void }) {
       <div className="header-actions">
         <span className="demo-tag">
           <span />
-          Bản demo
+          AI thử nghiệm
         </span>
         <ShieldCheck size={19} className="header-shield" />
         <Link href="/profile" aria-label="Mở hồ sơ cá nhân" className="avatar avatar-small">

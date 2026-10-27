@@ -1,41 +1,63 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ScanLine } from "lucide-react";
 import { patientService } from "@/services/patientService";
-import { predictionService } from "@/services/predictionService";
+import { imageService } from "@/services/imageService";
+import type { LocalImage } from "@/services/imageService";
+import { visitService } from "@/services/visitService";
+import { ApiError } from "@/lib/apiClient";
 import { useAsync } from "@/hooks/useAsync";
-import type { Patient, ClinicalRecord } from "@/types/patient";
-import type { PredictionScenario, XrayImage } from "@/types/prediction";
-import { SCENARIO_LABELS } from "@/constants/app";
-import { validateClinicalRecords } from "@/utils/validation";
+import type { Patient } from "@/types/patient";
+import type { VisitClinical } from "@/types/visit";
+import { MODEL_SCOPE_NOTICE } from "@/constants/app";
+import { emptyVisitDraft, toVisitClinical, validateVisitDraft } from "@/utils/visitForm";
 import { errorMessage } from "@/utils/format";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardHeader } from "@/components/common/Card";
-import { Select } from "@/components/common/Input";
 import { Button } from "@/components/common/Button";
-import { Alert, EmptyState, ErrorState } from "@/components/common/Feedback";
+import { Alert, ErrorState } from "@/components/common/Feedback";
 import { Loading } from "@/components/common/Loading";
-import { ClinicalRecords } from "@/components/patient/ClinicalRecords";
 import { XrayUpload } from "@/components/prediction/XrayUpload";
+import { VisitFields } from "@/components/prediction/VisitFields";
 
-function PredictionForm({
-  patients,
-  initialPatientId,
-}: {
-  patients: Patient[];
-  initialPatientId?: string;
-}) {
-  const first = patients.find((patient) => patient.id === initialPatientId) || patients[0];
-  const [patientId, setPatientId] = useState(first.id);
-  const [records, setRecords] = useState<ClinicalRecord[]>(first.clinicalRecords);
-  const [image, setImage] = useState<XrayImage | null>(null);
-  const [confirmed, setConfirmed] = useState(false);
-  const [scenario, setScenario] = useState<PredictionScenario>("silicosis");
+type Errors = Partial<Record<keyof VisitClinical, string>>;
+
+function PredictionForm({ patient }: { patient: Patient }) {
+  const [image, setImage] = useState<LocalImage | null>(null);
+  const [draft, setDraft] = useState(emptyVisitDraft);
+  const [serverErrors, setServerErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
-  const valid = !!image && confirmed && !validateClinicalRecords(records);
+  const errors = { ...serverErrors, ...validateVisitDraft(draft) };
+  const valid = !!image && !Object.keys(validateVisitDraft(draft)).length;
+
+  useEffect(
+    () => () => {
+      if (image) URL.revokeObjectURL(image.url);
+    },
+    [image],
+  );
+
+  async function submit() {
+    if (!image) return;
+    setBusy(true);
+    setError("");
+    setServerErrors({});
+    try {
+      const imageId = await imageService.upload(image.file);
+      const visit = await visitService.create(patient.id, { ...toVisitClinical(draft), imageId });
+      router.push(`/prediction/${visit.id}`);
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.code === "IMAGE_ALREADY_ATTACHED")
+        setError("Ảnh này đã được dùng cho một lượt khám trước. Mỗi lượt khám cần một ảnh riêng.");
+      else setError(errorMessage(reason));
+      if (reason instanceof ApiError) setServerErrors(reason.fieldErrors as Errors);
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="stack">
       <div className="steps">
@@ -44,7 +66,7 @@ function PredictionForm({
         </div>
         <div className="step-divider" />
         <div className={`step ${image ? "active" : ""}`}>
-          <span>2</span>Dữ liệu theo dõi
+          <span>2</span>Thông tin lượt khám
         </div>
         <div className="step-divider" />
         <div className={`step ${valid ? "active" : ""}`}>
@@ -56,146 +78,71 @@ function PredictionForm({
         <div className="stack">
           <Card>
             <CardHeader
-              title="Thông tin bệnh nhân"
-              description="Liên kết ảnh và kết quả với đúng hồ sơ."
-            />
-            <div className="card-body">
-              <Select
-                label="Chọn bệnh nhân"
-                value={patientId}
-                disabled={busy}
-                onChange={(event) => {
-                  const patient = patients.find((entry) => entry.id === event.target.value)!;
-                  setPatientId(patient.id);
-                  setRecords(patient.clinicalRecords);
-                  setConfirmed(false);
-                  setImage(null);
-                  setError("");
-                }}
-              >
-                {patients.map((patient) => (
-                  <option key={patient.id} value={patient.id}>
-                    {patient.name} · {patient.id}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </Card>
-          <Card>
-            <CardHeader
               title="Ảnh X-quang ngực"
-              description="Chọn một ảnh để thực hiện sàng lọc."
+              description={`${patient.name} · ${patient.code}`}
             />
             <div className="card-body">
               <XrayUpload value={image} onChange={setImage} disabled={busy} />
             </div>
           </Card>
-        </div>
-        <div className="stack">
-          <Card>
-            <CardHeader
-              title="Dữ liệu theo thời gian"
-              description="Các mốc phơi nhiễm và chỉ số lâm sàng của bệnh nhân."
-            />
-            <div className="card-body">
-              <ClinicalRecords
-                value={records}
-                disabled={busy}
-                onChange={(value) => {
-                  setRecords(value);
-                  setConfirmed(false);
-                }}
-              />
-              <label className="checkbox-label mt-5">
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  disabled={busy || !!validateClinicalRecords(records)}
-                  onChange={(event) => setConfirmed(event.target.checked)}
-                />
-                Tôi đã kiểm tra và xác nhận dữ liệu theo dõi.
-              </label>
-            </div>
-          </Card>
           <Card>
             <CardHeader
               title="Thực hiện dự đoán"
-              description="Kết quả và dữ liệu đầu vào sẽ được lưu vào lịch sử."
+              description="Ảnh, chỉ số và kết quả được lưu vào lịch sử lượt khám."
             />
             <div className="card-body stack">
-              <Select
-                label="Kịch bản demo"
-                value={scenario}
-                disabled={busy}
-                onChange={(event) => setScenario(event.target.value as PredictionScenario)}
-              >
-                {Object.entries(SCENARIO_LABELS).map(([key, label]) => (
-                  <option key={key} value={key}>
-                    {label}
-                  </option>
-                ))}
-              </Select>
-              <p className="notice">
-                Kết quả cố định theo kịch bản đã chọn, không phụ thuộc nội dung ảnh. Heatmap cũng
-                chỉ là minh họa.
-              </p>
-              <Button
-                disabled={!valid}
-                busy={busy}
-                className="w-full"
-                onClick={async () => {
-                  if (!image) return;
-                  setBusy(true);
-                  setError("");
-                  try {
-                    const result = await predictionService.predict({
-                      patientId,
-                      image,
-                      clinicalRecords: records,
-                      scenario,
-                    });
-                    router.push(`/prediction/${result.id}`);
-                  } catch (reason) {
-                    setError(errorMessage(reason));
-                    setBusy(false);
-                  }
-                }}
-              >
+              <Alert tone="info">{MODEL_SCOPE_NOTICE}</Alert>
+              <Button disabled={!valid} busy={busy} className="w-full" onClick={submit}>
                 <ScanLine size={18} />
-                {busy ? "Đang mô phỏng phân tích…" : "Bắt đầu dự đoán"}
+                {busy ? "Đang phân tích ảnh…" : "Lưu lượt khám & dự đoán"}
               </Button>
               {busy && (
                 <p role="status" className="notice">
-                  Đang mô phỏng kiểm tra ảnh, kết hợp dữ liệu và trả kết quả…
+                  Đang tải ảnh lên và chờ mô hình phân tích, có thể mất tới 30 giây…
                 </p>
               )}
             </div>
           </Card>
         </div>
+        <Card>
+          <CardHeader
+            title="Thông tin lượt khám"
+            description="Không bắt buộc. Các chỉ số được lưu cùng lượt khám để theo dõi, mô hình không dùng chúng."
+          />
+          <div className="card-body">
+            <VisitFields
+              value={draft}
+              onChange={(value) => {
+                setDraft(value);
+                setServerErrors({});
+              }}
+              errors={errors}
+              disabled={busy}
+            />
+          </div>
+        </Card>
       </div>
     </div>
   );
 }
 
-export function PredictionWorkspace({ patientId }: { patientId?: string }) {
-  const { data, loading, error, reload } = useAsync(patientService.getPatients);
+export function PredictionWorkspace() {
+  const { data, loading, error, reload } = useAsync(patientService.getMine);
   return (
     <>
       <PageHeader
         title="Dự đoán mới"
-        description="Kết hợp ảnh X-quang ngực và dữ liệu theo dõi để hỗ trợ sàng lọc."
+        description="Tải ảnh X-quang ngực để mô hình thử nghiệm sàng lọc bụi phổi silic."
       />
       {loading ? (
         <Loading />
-      ) : error ? (
-        <ErrorState message={error} retry={reload} />
-      ) : data?.length ? (
-        <PredictionForm patients={data} initialPatientId={patientId} />
-      ) : (
-        <EmptyState
-          title="Chưa có hồ sơ bệnh nhân"
-          description="Tạo hồ sơ bệnh nhân trước khi thực hiện dự đoán."
+      ) : error || !data ? (
+        <ErrorState
+          message={error || "Không tìm thấy hồ sơ bệnh nhân của tài khoản."}
+          retry={reload}
         />
+      ) : (
+        <PredictionForm patient={data} />
       )}
     </>
   );

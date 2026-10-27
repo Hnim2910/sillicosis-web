@@ -2,8 +2,8 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { FileImage, ImagePlus, Trash2, UploadCloud } from "lucide-react";
-import type { XrayImage } from "@/types/prediction";
 import { imageService } from "@/services/imageService";
+import type { LocalImage } from "@/services/imageService";
 import { Button } from "@/components/common/Button";
 import { Alert } from "@/components/common/Feedback";
 import { cn, errorMessage } from "@/utils/format";
@@ -13,8 +13,8 @@ export function XrayUpload({
   onChange,
   disabled = false,
 }: {
-  value: XrayImage | null;
-  onChange: (image: XrayImage | null) => void;
+  value: LocalImage | null;
+  onChange: (image: LocalImage | null) => void;
   disabled?: boolean;
 }) {
   const input = useRef<HTMLInputElement>(null);
@@ -96,7 +96,7 @@ export function XrayUpload({
             <UploadCloud size={30} strokeWidth={1.4} />
           </span>
           <h3>Kéo thả ảnh X-quang vào đây</h3>
-          <p>PNG hoặc JPEG · Tối đa 10 MB · Từ 256 × 256 px</p>
+          <p>PNG hoặc JPEG · Tối đa 10 MB · Cạnh ngắn từ 256 px</p>
           <Button
             variant="secondary"
             busy={busy}
@@ -108,8 +108,8 @@ export function XrayUpload({
           </Button>
         </div>
       )}
-      <div className="flex flex-wrap items-center gap-3">
-        {value && (
+      {value && (
+        <div className="flex flex-wrap items-center gap-3">
           <Button
             variant="secondary"
             disabled={disabled || busy}
@@ -117,21 +117,12 @@ export function XrayUpload({
           >
             Chọn ảnh khác
           </Button>
-        )}
-        <Button
-          variant="ghost"
-          disabled={disabled || busy}
-          onClick={async () => {
-            setError("");
-            onChange(await imageService.sample());
-          }}
-        >
-          Dùng ảnh minh họa
-        </Button>
-      </div>
+        </div>
+      )}
       <p className="notice">
-        Ảnh được kiểm tra định dạng, khả năng đọc và kích thước ngay trên thiết bị. Nhận diện
-        X-quang ngực và đánh giá chất lượng bằng AI chỉ được mô phỏng trong bản demo.
+        Ảnh được kiểm tra định dạng và kích thước trên thiết bị, sau đó máy chủ kiểm tra lại và xoá
+        thông tin kèm theo (EXIF) trước khi lưu. Hệ thống không tự nhận biết ảnh có phải X-quang
+        ngực hay không: hãy chọn đúng loại ảnh.
       </p>
     </div>
   );

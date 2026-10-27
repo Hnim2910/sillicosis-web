@@ -15,12 +15,8 @@ import type { ApiUser } from "@/services/userMapper";
 
 type AuthResponse = TokenPair & { user: ApiUser };
 
-// Signed-in user for this tab; mockStore reads it so the mock features keep their role checks.
+// Signed-in user for this tab.
 let sessionUser: User | null = null;
-
-export function getSessionUser() {
-  return sessionUser;
-}
 
 function setSessionUser(user: User | null) {
   sessionUser = user;
@@ -68,7 +64,7 @@ export const authService = {
     }).catch(() => undefined);
   },
   /** Backend signs the new patient in straight away. */
-  async register(input: Omit<AccountInput, "role">) {
+  async register(input: AccountInput) {
     const response = await apiRequest<AuthResponse>("/api/auth/register", {
       method: "POST",
       body: {

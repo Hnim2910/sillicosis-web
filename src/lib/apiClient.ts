@@ -18,6 +18,7 @@ export class ApiError extends Error {
     readonly code: string,
     message: string,
     readonly fieldErrors: Record<string, string> = {},
+    readonly details: Record<string, unknown> = {},
   ) {
     super(message);
     this.name = "ApiError";
@@ -29,6 +30,8 @@ const FALLBACK_MESSAGES: Record<number, string> = {
   401: "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
   403: "Bạn không có quyền thực hiện thao tác này.",
   404: "Không tìm thấy dữ liệu.",
+  413: "Tệp quá lớn.",
+  415: "Định dạng tệp không được hỗ trợ.",
   423: "Tài khoản đang tạm khoá. Vui lòng thử lại sau.",
 };
 
@@ -91,6 +94,7 @@ async function parseError(response: Response) {
     code?: string;
     message?: string;
     fieldErrors?: Record<string, string>;
+    details?: Record<string, unknown>;
   } | null;
   const fieldErrors = body?.fieldErrors || {};
   const details = Object.values(fieldErrors);
@@ -98,7 +102,13 @@ async function parseError(response: Response) {
     (details.length ? details.join(" ") : body?.message) ||
     FALLBACK_MESSAGES[response.status] ||
     "Máy chủ gặp sự cố. Vui lòng thử lại sau.";
-  return new ApiError(response.status, body?.code || "UNKNOWN", message, fieldErrors);
+  return new ApiError(
+    response.status,
+    body?.code || "UNKNOWN",
+    message,
+    fieldErrors,
+    body?.details || {},
+  );
 }
 
 async function send(path: string, init: RequestInit) {
@@ -171,21 +181,24 @@ function sessionExpired() {
 
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  /** Sent as JSON, except FormData which goes out as multipart/form-data. */
   body?: unknown;
   /** Public endpoints (login, register, …) skip the Bearer token and the refresh flow. */
   auth?: boolean;
 }
 
-export async function apiRequest<T = void>(path: string, options: RequestOptions = {}): Promise<T> {
+async function authorizedFetch(path: string, options: RequestOptions, accept: string) {
   const { method = "GET", body, auth = true } = options;
+  const multipart = body instanceof FormData;
   const call = () => {
-    const headers: Record<string, string> = { Accept: "application/json" };
-    if (body !== undefined) headers["Content-Type"] = "application/json";
+    const headers: Record<string, string> = { Accept: accept };
+    // The browser sets the multipart boundary itself.
+    if (body !== undefined && !multipart) headers["Content-Type"] = "application/json";
     if (auth && accessToken) headers.Authorization = `Bearer ${accessToken}`;
     return send(path, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : multipart ? body : JSON.stringify(body),
     });
   };
   // At most one refresh per request: either up front (no valid access token) or after a 401.
@@ -206,7 +219,38 @@ export async function apiRequest<T = void>(path: string, options: RequestOptions
     response = await call();
   }
   if (!response.ok) throw await parseError(response);
+  return response;
+}
+
+export async function apiRequest<T = void>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await authorizedFetch(path, options, "application/json");
   if (response.status === 204) return undefined as T;
   const text = await response.text();
   return (text ? JSON.parse(text) : undefined) as T;
+}
+
+/** Binary GET with the Bearer token, e.g. image content that an <img src> could not authorise. */
+export async function apiBlob(path: string): Promise<Blob> {
+  const response = await authorizedFetch(path, {}, "*/*");
+  return response.blob();
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+/** Loads every page of a paged list (size 100, the backend's maximum), newest first. Stops after 50 pages. */
+export async function apiAllPages<T>(path: string): Promise<T[]> {
+  const items: T[] = [];
+  const join = path.includes("?") ? "&" : "?";
+  for (let page = 0; page < 50; page++) {
+    const result = await apiRequest<PageResponse<T>>(`${path}${join}page=${page}&size=100`);
+    items.push(...result.content);
+    if (page + 1 >= result.totalPages) break;
+  }
+  return items;
 }

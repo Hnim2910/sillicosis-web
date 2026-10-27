@@ -1,38 +1,19 @@
 "use client";
 import { useState } from "react";
-import type { AccountInput, Role, User } from "@/types/user";
-import { ROLE_LABELS } from "@/constants/app";
-import { userService } from "@/services/userService";
-import { validContact, validPhone } from "@/utils/validation";
+import type { AccountInput } from "@/types/user";
+import { userService, validateAccount } from "@/services/userService";
+import { PASSWORD_RULE, validEmail, validPassword, validVnMobile } from "@/utils/validation";
 import { errorMessage } from "@/utils/format";
-import { Input, Select } from "@/components/common/Input";
+import { Input } from "@/components/common/Input";
 import { Button } from "@/components/common/Button";
 import { Alert } from "@/components/common/Feedback";
 
-export function AccountForm({
-  user,
-  currentUserId,
-  onSaved,
-  onCancel,
-}: {
-  user?: User;
-  currentUserId: string;
-  onSaved: () => void;
-  onCancel: () => void;
-}) {
-  const [form, setForm] = useState<AccountInput>({
-    name: user?.name || "",
-    email: user?.email || "",
-    phone: user?.phone || "",
-    password: "",
-    role: user?.role || "patient",
-  });
+/** Creates a patient account (role USER, with a linked patient record on the backend). */
+export function AccountForm({ onSaved, onCancel }: { onSaved: () => void; onCancel: () => void }) {
+  const [form, setForm] = useState<AccountInput>({ name: "", email: "", phone: "", password: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const valid =
-    form.name.trim().length >= 2 &&
-    validContact(form.email, form.phone) &&
-    ((user && !form.password) || form.password.length >= 8);
+  const valid = !validateAccount(form);
   const change = (key: keyof AccountInput) => (event: React.ChangeEvent<HTMLInputElement>) =>
     setForm({ ...form, [key]: event.target.value });
   return (
@@ -43,7 +24,7 @@ export function AccountForm({
         setBusy(true);
         setError("");
         try {
-          await userService.save(form, user?.id);
+          await userService.create(form);
           onSaved();
         } catch (reason) {
           setError(errorMessage(reason));
@@ -53,54 +34,53 @@ export function AccountForm({
       }}
     >
       {error && <Alert>{error}</Alert>}
-      <Input label="Họ và tên" required value={form.name} onChange={change("name")} />
+      <Input
+        label="Họ và tên"
+        required
+        maxLength={150}
+        value={form.name}
+        onChange={change("name")}
+      />
       <div className="form-grid">
         <Input
           label="Email"
           type="email"
-          required={!form.phone}
+          required
+          maxLength={255}
           value={form.email}
           onChange={change("email")}
+          error={form.email && !validEmail(form.email.trim()) ? "Email không hợp lệ." : undefined}
         />
         <Input
-          label="Số điện thoại"
-          required={!form.email}
+          label="Số điện thoại (không bắt buộc)"
           type="tel"
           value={form.phone}
           onChange={change("phone")}
-          error={form.phone && !validPhone(form.phone) ? "Số điện thoại không hợp lệ." : undefined}
+          error={
+            !validVnMobile(form.phone) ? "Số điện thoại di động Việt Nam không hợp lệ." : undefined
+          }
         />
       </div>
-      <Select
-        label="Vai trò"
-        value={form.role}
-        disabled={user?.id === currentUserId}
-        onChange={(event) => setForm({ ...form, role: event.target.value as Role })}
-      >
-        {Object.entries(ROLE_LABELS).map(([role, label]) => (
-          <option key={role} value={role}>
-            {label}
-          </option>
-        ))}
-      </Select>
       <Input
-        label={user ? "Mật khẩu mới (để trống để giữ nguyên)" : "Mật khẩu"}
+        label="Mật khẩu"
         type="password"
         autoComplete="new-password"
-        required={!user}
-        minLength={8}
+        required
+        maxLength={72}
         value={form.password}
         onChange={change("password")}
-        error={
-          form.password && form.password.length < 8 ? "Mật khẩu cần ít nhất 8 ký tự." : undefined
-        }
+        error={form.password && !validPassword(form.password) ? PASSWORD_RULE : undefined}
       />
+      <p className="notice">
+        Mật khẩu: {PASSWORD_RULE} Tài khoản mới có vai trò Bệnh nhân và được tạo kèm hồ sơ bệnh
+        nhân; người dùng tự cập nhật ngày sinh, nghề nghiệp trong trang hồ sơ.
+      </p>
       <div className="form-actions">
         <Button variant="secondary" disabled={busy} onClick={onCancel}>
           Hủy
         </Button>
         <Button type="submit" disabled={!valid} busy={busy}>
-          Lưu tài khoản
+          Tạo tài khoản
         </Button>
       </div>
     </form>

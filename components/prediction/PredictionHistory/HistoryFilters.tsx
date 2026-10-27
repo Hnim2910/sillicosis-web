@@ -1,4 +1,5 @@
 import { Input, Select } from "@/components/common/Input";
+import { OUTCOME_LABELS } from "@/constants/app";
 
 export function HistoryFilters({
   query,
@@ -23,23 +24,26 @@ export function HistoryFilters({
     <div className="toolbar">
       <Input
         label="Tìm kiếm"
-        placeholder="Tên bệnh nhân hoặc mã bản ghi…"
+        placeholder="Tên hoặc mã bệnh nhân…"
         value={query}
         onChange={(event) => onQuery(event.target.value)}
       />
       <Select label="Kết quả" value={label} onChange={(event) => onLabel(event.target.value)}>
         <option value="">Tất cả kết quả</option>
-        <option>Normal</option>
-        <option>Silicosis</option>
+        {Object.entries(OUTCOME_LABELS).map(([key, text]) => (
+          <option key={key} value={key}>
+            {text}
+          </option>
+        ))}
       </Select>
       <Input
-        label="Từ ngày"
+        label="Khám từ ngày"
         type="date"
         value={from}
         onChange={(event) => onFrom(event.target.value)}
       />
       <Input
-        label="Đến ngày"
+        label="Đến ngày khám"
         type="date"
         value={to}
         onChange={(event) => onTo(event.target.value)}
