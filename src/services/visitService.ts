@@ -23,14 +23,14 @@ export const visitService = {
   get(id: string) {
     return apiRequest<Visit>(path(id));
   },
-  /** Creates the visit; with an image the backend runs the prediction before answering. */
+  /** Creates the visit; with an image or clinical values the backend runs the prediction before answering. */
   create(patientId: string, input: VisitInput) {
     return apiRequest<Visit>(`/api/patients/${encodeURIComponent(patientId)}/visits`, {
       method: "POST",
       body: input,
     });
   },
-  /** Runs the model again on the attached image; a service failure still answers 201 with status FAILED. */
+  /** Runs the model again (clinical values + attached image if any); a service failure still answers 201 FAILED. */
   predict(id: string) {
     return apiRequest<Prediction>(`${path(id)}/predictions`, { method: "POST" });
   },

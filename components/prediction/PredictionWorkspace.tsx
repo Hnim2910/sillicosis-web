@@ -9,29 +9,50 @@ import { visitService } from "@/services/visitService";
 import { ApiError } from "@/lib/apiClient";
 import { useAsync } from "@/hooks/useAsync";
 import type { Patient } from "@/types/patient";
-import type { VisitClinical } from "@/types/visit";
 import { MODEL_SCOPE_NOTICE } from "@/constants/app";
-import { emptyVisitDraft, toVisitClinical, validateVisitDraft } from "@/utils/visitForm";
-import { errorMessage } from "@/utils/format";
+import {
+  clinicalServerErrors,
+  emptyClinicalDraft,
+  hasClinicalValue,
+  toLamSang,
+  validateClinicalDraft,
+} from "@/utils/clinicalForm";
+import { errorMessage, today } from "@/utils/format";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardHeader } from "@/components/common/Card";
 import { Button } from "@/components/common/Button";
 import { Alert, ErrorState } from "@/components/common/Feedback";
 import { Loading } from "@/components/common/Loading";
 import { XrayUpload } from "@/components/prediction/XrayUpload";
-import { VisitFields } from "@/components/prediction/VisitFields";
+import { ClinicalFields } from "@/components/prediction/ClinicalFields";
+import { ClinicalImport } from "@/components/prediction/ClinicalImport";
+import type { ClinicalDraft } from "@/utils/clinicalForm";
 
-type Errors = Partial<Record<keyof VisitClinical, string>>;
+type Errors = Record<string, string>;
+
+function dateError(value: string): Errors {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && value <= today()
+    ? {}
+    : { visitDate: "Ngày khám không hợp lệ hoặc ở tương lai." };
+}
 
 function PredictionForm({ patient }: { patient: Patient }) {
   const [image, setImage] = useState<LocalImage | null>(null);
-  const [draft, setDraft] = useState(emptyVisitDraft);
+  const [confirmed, setConfirmed] = useState(false);
+  const [visitDate, setVisitDate] = useState(today);
+  const [draft, setDraft] = useState(emptyClinicalDraft);
   const [serverErrors, setServerErrors] = useState<Errors>({});
+  // Fields whose value in an imported file could not be read; cleared field by field as the user edits them.
+  const [importErrors, setImportErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
-  const errors = { ...serverErrors, ...validateVisitDraft(draft) };
-  const valid = !!image && !Object.keys(validateVisitDraft(draft)).length;
+  const localErrors = { ...dateError(visitDate), ...validateClinicalDraft(draft) };
+  const errors = { ...importErrors, ...serverErrors, ...localErrors };
+  const hasClinical = hasClinicalValue(draft);
+  // Image optional; when one is chosen the user must confirm it is a frontal chest X-ray.
+  const imageReady = !image || confirmed;
+  const valid = (!!image || hasClinical) && imageReady && !Object.keys(localErrors).length;
 
   useEffect(
     () => () => {
@@ -41,19 +62,29 @@ function PredictionForm({ patient }: { patient: Patient }) {
   );
 
   async function submit() {
-    if (!image) return;
+    if (!valid) return;
     setBusy(true);
     setError("");
     setServerErrors({});
     try {
-      const imageId = await imageService.upload(image.file);
-      const visit = await visitService.create(patient.id, { ...toVisitClinical(draft), imageId });
+      const imageId = image ? await imageService.upload(image.file) : null;
+      const visit = await visitService.create(patient.id, {
+        visitDate,
+        extra: { lam_sang: toLamSang(draft) },
+        imageId,
+      });
       router.push(`/prediction/${visit.id}`);
     } catch (reason) {
       if (reason instanceof ApiError && reason.code === "IMAGE_ALREADY_ATTACHED")
         setError("Ảnh này đã được dùng cho một lượt khám trước. Mỗi lượt khám cần một ảnh riêng.");
       else setError(errorMessage(reason));
-      if (reason instanceof ApiError) setServerErrors(reason.fieldErrors as Errors);
+      if (reason instanceof ApiError) {
+        const fields = reason.fieldErrors as Errors;
+        setServerErrors({
+          ...clinicalServerErrors(fields),
+          ...(fields.visitDate ? { visitDate: fields.visitDate } : {}),
+        });
+      }
       setBusy(false);
     }
   }
@@ -62,11 +93,11 @@ function PredictionForm({ patient }: { patient: Patient }) {
     <div className="stack">
       <div className="steps">
         <div className="step active">
-          <span>1</span>Ảnh X-quang
+          <span>1</span>Thông tin lâm sàng
         </div>
         <div className="step-divider" />
         <div className={`step ${image ? "active" : ""}`}>
-          <span>2</span>Thông tin lượt khám
+          <span>2</span>Ảnh X-quang (không bắt buộc)
         </div>
         <div className="step-divider" />
         <div className={`step ${valid ? "active" : ""}`}>
@@ -78,27 +109,57 @@ function PredictionForm({ patient }: { patient: Patient }) {
         <div className="stack">
           <Card>
             <CardHeader
-              title="Ảnh X-quang ngực"
+              title="Ảnh X-quang ngực (không bắt buộc)"
               description={`${patient.name} · ${patient.code}`}
             />
-            <div className="card-body">
-              <XrayUpload value={image} onChange={setImage} disabled={busy} />
+            <div className="card-body stack">
+              <XrayUpload
+                value={image}
+                onChange={(next) => {
+                  setImage(next);
+                  setConfirmed(false);
+                }}
+                disabled={busy}
+              />
+              {image && (
+                <label className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={confirmed}
+                    disabled={busy}
+                    onChange={(event) => setConfirmed(event.target.checked)}
+                  />
+                  <span>
+                    Đây là phim X-quang ngực thẳng
+                    {!confirmed && (
+                      <small className="block field-error">
+                        Cần xác nhận trước khi gửi ảnh cho mô hình.
+                      </small>
+                    )}
+                  </span>
+                </label>
+              )}
             </div>
           </Card>
           <Card>
             <CardHeader
               title="Thực hiện dự đoán"
-              description="Ảnh, chỉ số và kết quả được lưu vào lịch sử lượt khám."
+              description="Thông tin, ảnh và kết quả được lưu vào lịch sử lượt khám."
             />
             <div className="card-body stack">
               <Alert tone="info">{MODEL_SCOPE_NOTICE}</Alert>
+              {!image && !hasClinical && (
+                <p className="notice">Nhập ít nhất một thông tin lâm sàng hoặc chọn một ảnh.</p>
+              )}
               <Button disabled={!valid} busy={busy} className="w-full" onClick={submit}>
                 <ScanLine size={18} />
-                {busy ? "Đang phân tích ảnh…" : "Lưu lượt khám & dự đoán"}
+                {busy ? "Đang phân tích…" : "Lưu lượt khám & dự đoán"}
               </Button>
               {busy && (
                 <p role="status" className="notice">
-                  Đang tải ảnh lên và chờ mô hình phân tích, có thể mất tới 30 giây…
+                  {image ? "Đang tải ảnh lên và chờ" : "Đang chờ"} mô hình phân tích, có thể mất
+                  tới 30 giây…
                 </p>
               )}
             </div>
@@ -106,13 +167,33 @@ function PredictionForm({ patient }: { patient: Patient }) {
         </div>
         <Card>
           <CardHeader
-            title="Thông tin lượt khám"
-            description="Không bắt buộc. Các chỉ số được lưu cùng lượt khám để theo dõi, mô hình không dùng chúng."
+            title="Thông tin lâm sàng"
+            description="Không bắt buộc ô nào. Mô hình dùng các thông tin này; ô để trống được xem là chưa ghi nhận."
           />
-          <div className="card-body">
-            <VisitFields
+          <div className="card-body stack">
+            <ClinicalImport
+              disabled={busy}
+              onImport={(result) => {
+                setDraft(result.draft);
+                setServerErrors({});
+                setImportErrors(
+                  Object.fromEntries(
+                    result.invalid.map((key) => [key, "Giá trị trong file không hợp lệ, hãy nhập lại."]),
+                  ),
+                );
+              }}
+            />
+            <ClinicalFields
+              visitDate={visitDate}
+              onVisitDateChange={(value) => {
+                setVisitDate(value);
+                setServerErrors({});
+              }}
               value={draft}
-              onChange={(value) => {
+              onChange={(value: ClinicalDraft) => {
+                setImportErrors((current) =>
+                  Object.fromEntries(Object.entries(current).filter(([key]) => value[key] === draft[key])),
+                );
                 setDraft(value);
                 setServerErrors({});
               }}
@@ -132,7 +213,7 @@ export function PredictionWorkspace() {
     <>
       <PageHeader
         title="Dự đoán mới"
-        description="Tải ảnh X-quang ngực để mô hình thử nghiệm sàng lọc bụi phổi silic."
+        description="Nhập thông tin lâm sàng, có thể kèm ảnh X-quang ngực, để mô hình thử nghiệm sàng lọc bụi phổi silic."
       />
       {loading ? (
         <Loading />

@@ -7,7 +7,8 @@ import { Table } from "@/components/common/Table";
 import { Badge } from "@/components/common/Badge";
 import { Button } from "@/components/common/Button";
 import { formatDate } from "@/utils/format";
-import { formatPercent } from "@/utils/visitDisplay";
+import { CLINICAL_RISK_TEXT } from "@/constants/app";
+import { clinicalRiskLevel, formatChance, mainChance } from "@/utils/visitDisplay";
 
 export const OUTCOME_TONES: Record<VisitOutcome, "warning" | "success" | "danger" | "neutral"> = {
   Co: "warning",
@@ -32,7 +33,7 @@ export function HistoryTable({
         ...(showPatient ? ["Bệnh nhân"] : []),
         "Ngày khám",
         "Kết quả AI",
-        "Xác suất",
+        "Khả năng",
         "Thời gian dự đoán",
         "Thao tác",
       ]}
@@ -56,14 +57,16 @@ export function HistoryTable({
             <td>{day}</td>
             <td>
               <Badge tone={OUTCOME_TONES[outcome]}>
-                {visit.image || outcome !== "NONE" ? OUTCOME_LABELS[outcome] : "Chưa có ảnh"}
+                {OUTCOME_LABELS[outcome]}
               </Badge>
             </td>
             <td>
               <span className="font-semibold text-slate-600">
-                {prediction?.status === "SUCCESS" && prediction.probability !== null
-                  ? formatPercent(prediction.probability)
-                  : "—"}
+                {prediction && mainChance(prediction) !== null
+                  ? `Khả năng ${formatChance(mainChance(prediction)!)}`
+                  : prediction && clinicalRiskLevel(prediction)
+                    ? CLINICAL_RISK_TEXT[clinicalRiskLevel(prediction)!].label
+                    : "—"}
               </span>
             </td>
             <td>{prediction ? formatDate(prediction.createdAt, true) : "—"}</td>

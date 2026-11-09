@@ -355,6 +355,15 @@
 .result-label.normal {
   color: #188a78;
 }
+.result-label.risk-low {
+  color: #188a78;
+}
+.result-label.risk-medium {
+  color: #c27a1c;
+}
+.result-label.risk-high {
+  color: #bc3f3f;
+}
 .confidence-bar {
   height: 7px;
   background: #eef2f4;

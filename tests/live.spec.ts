@@ -63,6 +63,30 @@ test.describe("admin", () => {
   });
 });
 
+/** Deletes a visit (and its image) created by a write test; needs the admin account. */
+async function removeVisit(visitId: string) {
+  if (!ADMIN.id || !ADMIN.password) return;
+  const response = await fetch(`${API_URL}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier: ADMIN.id, password: ADMIN.password }),
+  });
+  const { accessToken } = (await response.json()) as { accessToken: string };
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  const visit = (await (await fetch(`${API_URL}/api/visits/${visitId}`, { headers })).json()) as {
+    image: { id: string } | null;
+  };
+  const removed = await fetch(`${API_URL}/api/visits/${visitId}`, { method: "DELETE", headers });
+  expect(removed.ok).toBe(true);
+  if (visit.image) {
+    const image = await fetch(`${API_URL}/api/images/${visit.image.id}`, {
+      method: "DELETE",
+      headers,
+    });
+    expect(image.ok).toBe(true);
+  }
+}
+
 test.describe("patient", () => {
   test.skip(!PATIENT.id || !PATIENT.password, "Thiếu E2E_PATIENT_EMAIL / E2E_PATIENT_PASSWORD");
 
@@ -79,8 +103,29 @@ test.describe("patient", () => {
       .getByLabel("Chọn ảnh X-quang")
       .setInputFiles({ name: "small.png", mimeType: "image/png", buffer: small });
     await expect(page.getByText("Ảnh quá nhỏ. Cạnh ngắn phải từ 256 pixel.")).toBeVisible();
+    // Nothing entered and no image: nothing to predict from.
     await expect(page.getByRole("button", { name: "Lưu lượt khám & dự đoán" })).toBeDisabled();
     expect(uploads).toEqual([]);
+  });
+
+  test("predicts from clinical data only, with follow-up questions", async ({ page }) => {
+    test.skip(process.env.E2E_WRITE !== "1", "Chỉ chạy khi E2E_WRITE=1 (ghi dữ liệu thật)");
+    await login(page, PATIENT);
+    await expect(page).toHaveURL(/\/dashboard$/);
+    await page.goto("/prediction");
+    await expect(page.getByLabel("Thời điểm ho")).toHaveCount(0);
+    await page.getByLabel("Ho", { exact: true }).selectOption({ label: "Có" });
+    await page.getByLabel("Thời điểm ho").selectOption({ label: "Ban đêm" });
+    await page.getByLabel("FVC % so với lý thuyết (%)").fill("72,5");
+    await page.getByRole("button", { name: "Lưu lượt khám & dự đoán" }).click();
+    await expect(page).toHaveURL(/\/prediction\/[0-9a-f-]{36}$/, { timeout: 60_000 });
+    const visitId = page.url().split("/").pop()!;
+    await expect(
+      page.getByText(/Khả năng có bất thường trên phim phổi|Nguy cơ (thấp|trung bình|cao)|Thử lại/).first(),
+    ).toBeVisible();
+    await expect(page.getByText("Ban đêm")).toBeVisible();
+    await expect(page.getByText(/dương tính|âm tính/i)).toHaveCount(0);
+    await removeVisit(visitId);
   });
 
   test("creates a visit, shows the AI result and lists it in history", async ({ page }) => {
@@ -93,42 +138,21 @@ test.describe("patient", () => {
       .getByLabel("Chọn ảnh X-quang")
       .setInputFiles({ name: "e2e-synthetic.png", mimeType: "image/png", buffer: image });
     await page.getByLabel("Chiều cao (cm)").fill("165");
-    await page.getByRole("button", { name: "Lưu lượt khám & dự đoán" }).click();
+    const submit = page.getByRole("button", { name: "Lưu lượt khám & dự đoán" });
+    // An image is only sent after confirming it is a frontal chest X-ray.
+    await expect(submit).toBeDisabled();
+    await page.getByLabel("Đây là phim X-quang ngực thẳng").check();
+    await submit.click();
     await expect(page).toHaveURL(/\/prediction\/[0-9a-f-]{36}$/, { timeout: 60_000 });
     const visitId = page.url().split("/").pop()!;
     // Either a result or a prediction failure with retry; both are valid backend outcomes.
     await expect(
-      page.getByText(/Nghi bụi phổi silic|Không phát hiện|Thử lại/).first(),
+      page.getByText(/Khả năng có bất thường trên phim phổi|Nguy cơ (thấp|trung bình|cao)|Thử lại/).first(),
     ).toBeVisible();
     await expect(page.getByText("165 cm")).toBeVisible();
     await page.goto("/history");
     await expect(page.locator(`a[href="/history/${visitId}"]`)).toBeVisible();
 
-    if (ADMIN.id && ADMIN.password) {
-      const response = await fetch(`${API_URL}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ identifier: ADMIN.id, password: ADMIN.password }),
-      });
-      const { accessToken } = (await response.json()) as { accessToken: string };
-      const headers = { Authorization: `Bearer ${accessToken}` };
-      const visit = (await (
-        await fetch(`${API_URL}/api/visits/${visitId}`, { headers })
-      ).json()) as {
-        image: { id: string } | null;
-      };
-      const removed = await fetch(`${API_URL}/api/visits/${visitId}`, {
-        method: "DELETE",
-        headers,
-      });
-      expect(removed.ok).toBe(true);
-      if (visit.image) {
-        const image = await fetch(`${API_URL}/api/images/${visit.image.id}`, {
-          method: "DELETE",
-          headers,
-        });
-        expect(image.ok).toBe(true);
-      }
-    }
+    await removeVisit(visitId);
   });
 });
