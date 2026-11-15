@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ScanLine } from "lucide-react";
+import { ArrowRight, CheckCircle2, MoonStar, ScanLine, ShieldCheck, Sparkles, SunMedium } from "lucide-react";
 import { patientService } from "@/services/patientService";
 import { imageService } from "@/services/imageService";
 import type { LocalImage } from "@/services/imageService";
@@ -18,7 +18,6 @@ import {
   validateClinicalDraft,
 } from "@/utils/clinicalForm";
 import { errorMessage, today } from "@/utils/format";
-import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardHeader } from "@/components/common/Card";
 import { Button } from "@/components/common/Button";
 import { Alert, ErrorState } from "@/components/common/Feedback";
@@ -90,26 +89,29 @@ function PredictionForm({ patient }: { patient: Patient }) {
   }
 
   return (
-    <div className="stack">
+    <div className="stack prediction-shell">
       <div className="steps">
         <div className="step active">
-          <span>1</span>Thông tin lâm sàng
+          <span>1</span>
+          <span>Thông tin lâm sàng</span>
         </div>
         <div className="step-divider" />
         <div className={`step ${image ? "active" : ""}`}>
-          <span>2</span>Ảnh X-quang (không bắt buộc)
+          <span>2</span>
+          <span>Ảnh X-quang</span>
         </div>
         <div className="step-divider" />
         <div className={`step ${valid ? "active" : ""}`}>
-          <span>3</span>Phân tích & kết quả
+          <span>3</span>
+          <span>Phân tích & kết quả</span>
         </div>
       </div>
       {error && <Alert>{error}</Alert>}
       <div className="prediction-grid">
         <div className="stack">
-          <Card>
+          <Card className="prediction-card-soft">
             <CardHeader
-              title="Ảnh X-quang ngực (không bắt buộc)"
+              title="Ảnh X-quang ngực"
               description={`${patient.name} · ${patient.code}`}
             />
             <div className="card-body stack">
@@ -122,10 +124,9 @@ function PredictionForm({ patient }: { patient: Patient }) {
                 disabled={busy}
               />
               {image && (
-                <label className="flex items-start gap-2 text-sm">
+                <label className="prediction-checkbox">
                   <input
                     type="checkbox"
-                    className="mt-1"
                     checked={confirmed}
                     disabled={busy}
                     onChange={(event) => setConfirmed(event.target.checked)}
@@ -142,7 +143,7 @@ function PredictionForm({ patient }: { patient: Patient }) {
               )}
             </div>
           </Card>
-          <Card>
+          <Card className="prediction-card-soft">
             <CardHeader
               title="Thực hiện dự đoán"
               description="Thông tin, ảnh và kết quả được lưu vào lịch sử lượt khám."
@@ -165,7 +166,7 @@ function PredictionForm({ patient }: { patient: Patient }) {
             </div>
           </Card>
         </div>
-        <Card>
+        <Card className="prediction-card-soft clinical-panel">
           <CardHeader
             title="Thông tin lâm sàng"
             description="Không bắt buộc ô nào. Mô hình dùng các thông tin này; ô để trống được xem là chưa ghi nhận."
@@ -209,12 +210,70 @@ function PredictionForm({ patient }: { patient: Patient }) {
 
 export function PredictionWorkspace() {
   const { data, loading, error, reload } = useAsync(patientService.getMine);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
+
   return (
-    <>
-      <PageHeader
-        title="Dự đoán mới"
-        description="Nhập thông tin lâm sàng, có thể kèm ảnh X-quang ngực, để mô hình thử nghiệm sàng lọc bụi phổi silic."
-      />
+    <div className={`prediction-app prediction-app--${theme}`}>
+      <div className="prediction-hero">
+        <div className="prediction-hero__content">
+          <span className="prediction-pill">
+            <Sparkles size={14} />
+            AI Chest X-ray
+          </span>
+          <h1>Nhận diện dấu hiệu bất thường với AI hỗ trợ chẩn đoán.</h1>
+          <p>
+            Gửi thông tin lâm sàng hoặc ảnh X-quang ngực để rút ngắn thời gian triage, ưu tiên
+            ca cần xử lý sớm và hỗ trợ đánh giá nguy cơ rõ ràng hơn.
+          </p>
+          <div className="prediction-hero__stats">
+            <div>
+              <strong>124</strong>
+              <span>tìm kiếm</span>
+            </div>
+            <div>
+              <strong>&lt;20s</strong>
+              <span>phân tích</span>
+            </div>
+            <div>
+              <strong>AI</strong>
+              <span>triage</span>
+            </div>
+          </div>
+        </div>
+        <div className="prediction-hero__panel">
+          <div className="prediction-hero__panel-header">
+            <span className="prediction-badge">Live assessment</span>
+            <button
+              type="button"
+              className="prediction-theme-toggle"
+              onClick={() => setTheme((current) => (current === "light" ? "dark" : "light"))}
+              aria-label="Chuyển đổi chế độ giao diện"
+            >
+              {theme === "light" ? <MoonStar size={14} /> : <SunMedium size={14} />}
+              {theme === "light" ? "Dark" : "Light"}
+            </button>
+          </div>
+          <div className="prediction-hero__score">92%</div>
+          <div className="prediction-hero__track">
+            <span style={{ width: "92%" }} />
+          </div>
+          <ul className="prediction-hero__list">
+            <li>
+              <CheckCircle2 size={15} />
+              Tối ưu ưu tiên ca bệnh
+            </li>
+            <li>
+              <ShieldCheck size={15} />
+              Hỗ trợ sàng lọc nguy cơ
+            </li>
+            <li>
+              <ArrowRight size={15} />
+              Kết quả trực quan và nhanh
+            </li>
+          </ul>
+        </div>
+      </div>
+
       {loading ? (
         <Loading />
       ) : error || !data ? (
@@ -225,6 +284,6 @@ export function PredictionWorkspace() {
       ) : (
         <PredictionForm patient={data} />
       )}
-    </>
+    </div>
   );
 }
