@@ -7,6 +7,7 @@ type ApiGender = "MALE" | "FEMALE" | "OTHER";
 
 export interface ApiUser {
   id: string;
+  code: string | null;
   email: string;
   phone: string | null;
   fullName: string;
@@ -15,6 +16,9 @@ export interface ApiUser {
   birthDate: string | null;
   gender: ApiGender | null;
   occupation: string | null;
+  workplace: string | null;
+  exposureHistory: string | null;
+  riskFactors: string | null;
 }
 
 export interface ApiProfile {
@@ -24,6 +28,9 @@ export interface ApiProfile {
   birthDate: string | null;
   gender: ApiGender | null;
   occupation: string | null;
+  workplace: string | null;
+  exposureHistory: string | null;
+  riskFactors: string | null;
 }
 
 const ROLE_FROM_API: Record<ApiRole, Role> = { USER: "patient", ADMIN: "admin" };
@@ -31,6 +38,7 @@ const ROLE_FROM_API: Record<ApiRole, Role> = { USER: "patient", ADMIN: "admin" }
 export function toUser(user: ApiUser): User {
   return {
     id: user.id,
+    code: user.code || "",
     name: user.fullName,
     email: user.email,
     phone: user.phone || "",
@@ -39,6 +47,9 @@ export function toUser(user: ApiUser): User {
     birthDate: user.birthDate || "",
     gender: (user.gender?.toLowerCase() as Gender | undefined) || "",
     occupation: user.occupation || "",
+    workplace: user.workplace || "",
+    exposureHistory: user.exposureHistory || "",
+    riskFactors: user.riskFactors || "",
   };
 }
 
@@ -52,5 +63,8 @@ export function toApiProfile(input: ProfileInput): ApiProfile {
     birthDate: blank(input.birthDate),
     gender: input.gender ? (input.gender.toUpperCase() as ApiGender) : null,
     occupation: blank(input.occupation),
+    workplace: blank(input.workplace),
+    exposureHistory: blank(input.exposureHistory),
+    riskFactors: blank(input.riskFactors),
   };
 }

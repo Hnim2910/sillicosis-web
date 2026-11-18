@@ -8,12 +8,6 @@ export const NAVIGATION = [
     roles: ["patient", "admin"],
   },
   {
-    href: "/patients",
-    label: "Hồ sơ bệnh nhân",
-    icon: "patients",
-    roles: ["admin"],
-  },
-  {
     href: "/prediction",
     label: "Dự đoán mới",
     icon: "scan",

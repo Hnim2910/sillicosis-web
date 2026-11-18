@@ -1,4 +1,4 @@
-import type { Prediction, Visit } from "@/types/visit";
+import type { Prediction } from "@/types/prediction";
 import {
   CLINICAL_HIGH_RISK,
   CLINICAL_RISK_TEXT,
@@ -6,7 +6,6 @@ import {
   RECOMMENDATION_TEXT,
 } from "@/constants/app";
 import type { ClinicalRiskLevel } from "@/constants/app";
-import { NUMBER_RULES } from "@/utils/visitForm";
 import { CLINICAL_FIELDS } from "@/constants/clinicalFields";
 
 const numberFormat = new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 });
@@ -22,20 +21,18 @@ export function formatChance(value: number) {
   return percent < 1 ? "<1%" : `${Math.round(percent)}%`;
 }
 
-/** Headline score: the fused score with an image (old results: their probability).
- *  Clinical-only results show a risk level instead (clinicalRiskLevel). */
+/** Headline score: the fused score with an image. Clinical-only results show a risk level instead
+ *  (clinicalRiskLevel). */
 export function mainChance(prediction: Prediction): number | null {
-  if (prediction.status !== "SUCCESS" || prediction.coAnh === false) return null;
-  if (prediction.coAnh && prediction.pGhep !== null) return prediction.pGhep;
-  return prediction.probability;
+  if (prediction.status !== "SUCCESS" || !prediction.coAnh) return null;
+  return prediction.pGhep;
 }
 
 /** Recommendation from the model's own conclusion (ket_luan_cuoi), worded by whether an image was used. */
 export function recommendationText(prediction: Prediction) {
   const level = clinicalRiskLevel(prediction);
   if (level) return CLINICAL_RISK_TEXT[level].advice;
-  const atRisk = prediction.ketLuanCuoi ?? prediction.label === "Co";
-  return atRisk ? RECOMMENDATION_TEXT.imageAtRisk : RECOMMENDATION_TEXT.low;
+  return prediction.ketLuanCuoi ? RECOMMENDATION_TEXT.imageAtRisk : RECOMMENDATION_TEXT.low;
 }
 
 /** Clinical-only result → low (< nguong_lam_sang), medium (< CLINICAL_HIGH_RISK) or high; null otherwise. */
@@ -51,6 +48,14 @@ export function clinicalRiskLevel(prediction: Prediction): ClinicalRiskLevel | n
   return belowThreshold ? "low" : "medium";
 }
 
+/** Short result for tables: the score with an image, the risk level without one. */
+export function shortResult(prediction: Prediction) {
+  const chance = mainChance(prediction);
+  if (chance !== null) return `Khả năng ${formatChance(chance)}`;
+  const level = clinicalRiskLevel(prediction);
+  return level ? CLINICAL_RISK_TEXT[level].label : "—";
+}
+
 export function predictionErrorText(prediction: Prediction) {
   return (
     PREDICTION_ERRORS[prediction.errorCode || ""] ||
@@ -58,13 +63,9 @@ export function predictionErrorText(prediction: Prediction) {
   );
 }
 
-export function hasLamSang(visit: Visit) {
-  return Object.keys(visit.extra?.lam_sang ?? {}).length > 0;
-}
-
-/** New Way values (extra.lam_sang) with their Vietnamese labels, in form order. */
-function lamSangRows(visit: Visit): [string, string][] {
-  const values = visit.extra?.lam_sang ?? {};
+/** Label → value for every clinical value sent with the screening, in form order. */
+export function clinicalRows(prediction: Prediction): [string, string][] {
+  const values = prediction.lamSang ?? {};
   const rows: [string, string][] = [];
   for (const field of CLINICAL_FIELDS) {
     const value = values[field.key];
@@ -77,36 +78,5 @@ function lamSangRows(visit: Visit): [string, string][] {
           : String(value);
     rows.push([field.label, field.unit ? `${shown} ${field.unit}` : shown]);
   }
-  return rows;
-}
-
-/** Label → value for every clinical value the visit has; unmeasured values are left out.
- *  New Way visits show extra.lam_sang; the old columns are still shown for older visits. */
-export function clinicalRows(visit: Visit): [string, string][] {
-  const rows: [string, string][] = lamSangRows(visit);
-  const text = (label: string, value: string | null) => value && rows.push([label, value]);
-  const number = (key: keyof typeof NUMBER_RULES) => {
-    const value = visit[key];
-    if (value !== null && value !== undefined)
-      rows.push([
-        NUMBER_RULES[key].label,
-        `${numberFormat.format(value)} ${NUMBER_RULES[key].unit}`,
-      ]);
-  };
-  text("Ngành nghề", visit.industry);
-  text("Tỉnh/thành làm việc", visit.province);
-  number("yearsInJob");
-  number("yearsExposed");
-  if (visit.ageAtVisit !== null) rows.push(["Tuổi khi khám", `${visit.ageAtVisit}`]);
-  number("heightCm");
-  number("weightKg");
-  if (visit.bmi !== null) rows.push(["BMI (chỉ số khối cơ thể)", numberFormat.format(visit.bmi)]);
-  number("systolicBp");
-  number("diastolicBp");
-  number("pulse");
-  if (visit.smoker !== null) rows.push(["Hút thuốc", visit.smoker ? "Có" : "Không"]);
-  number("cigarettesPerDay");
-  number("fvcL");
-  number("fev1L");
   return rows;
 }

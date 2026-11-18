@@ -64,7 +64,7 @@ export function XrayUpload({
             <FileImage size={18} className="text-teal-700" />
             <span className="flex-1">
               {value.name}
-              <small className="block text-slate-400">
+              <small className="block text-slate-600">
                 {value.width} × {value.height} px · {(value.size / 1024).toFixed(1)} KB
               </small>
             </span>
@@ -120,9 +120,7 @@ export function XrayUpload({
         </div>
       )}
       <p className="notice">
-        Ảnh được kiểm tra định dạng và kích thước trên thiết bị, sau đó máy chủ kiểm tra lại và xoá
-        thông tin kèm theo (EXIF) trước khi lưu. Hệ thống không tự nhận biết ảnh có phải X-quang
-        ngực hay không: hãy chọn đúng loại ảnh.
+        Hệ thống không tự nhận biết loại ảnh: hãy chọn đúng phim X-quang ngực thẳng.
       </p>
     </div>
   );

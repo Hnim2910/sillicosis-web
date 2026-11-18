@@ -1,7 +1,6 @@
 import { MAX_IMAGE_BYTES } from "@/constants/app";
-import { ApiError, apiBlob, apiRequest } from "@/lib/apiClient";
 
-/** An image chosen on this device, before upload. `url` is an object URL the caller must revoke. */
+/** An image chosen on this device, before it is sent. `url` is an object URL the caller must revoke. */
 export interface LocalImage {
   file: File;
   name: string;
@@ -22,7 +21,7 @@ export function loadImage(source: string): Promise<HTMLImageElement> {
 }
 
 export const imageService = {
-  /** Same checks as the backend (type, 10 MB, short side ≥ 256 px) so most mistakes show before upload. */
+  /** Same checks as the backend (type, 10 MB, short side ≥ 256 px) so most mistakes show before sending. */
   async prepare(file: File): Promise<LocalImage> {
     if (!["image/jpeg", "image/png"].includes(file.type) || !/\.(png|jpe?g)$/i.test(file.name))
       throw new Error("Chỉ chấp nhận ảnh PNG hoặc JPEG.");
@@ -47,26 +46,5 @@ export const imageService = {
       URL.revokeObjectURL(url);
       throw reason;
     }
-  },
-  /** Uploads and returns the image id. Re-uploading the same picture reuses the stored one. */
-  async upload(file: File) {
-    const form = new FormData();
-    form.append("file", file);
-    try {
-      return (await apiRequest<{ id: string }>("/api/images", { method: "POST", body: form })).id;
-    } catch (reason) {
-      const existing = reason instanceof ApiError && reason.details.imageId;
-      if (
-        reason instanceof ApiError &&
-        reason.code === "IMAGE_DUPLICATE" &&
-        typeof existing === "string"
-      )
-        return existing;
-      throw reason;
-    }
-  },
-  /** Object URL for a stored image (the content endpoint needs the Bearer token). Revoke it when done. */
-  async contentUrl(imageId: string) {
-    return URL.createObjectURL(await apiBlob(`/api/images/${encodeURIComponent(imageId)}/content`));
   },
 };

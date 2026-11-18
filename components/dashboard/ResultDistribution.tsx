@@ -7,7 +7,7 @@ export function ResultDistribution({ normal, silicosis }: { normal: number; sili
     <Card>
       <CardHeader
         title="Phân bố kết quả"
-        description="Các lượt khám đã dự đoán thành công (kết quả gần nhất)"
+        description="Các lượt chẩn đoán thành công"
       />
       {!total ? (
         <EmptyState description="Biểu đồ xuất hiện sau lần dự đoán đầu tiên." />

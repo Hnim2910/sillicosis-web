@@ -1,45 +1,32 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { ChevronRight, Menu, ShieldCheck } from "lucide-react";
-import { NAVIGATION } from "@/constants/navigation";
+import { Menu } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { initials } from "@/utils/format";
+import { Brand } from "@/components/common/Brand";
 import { Button } from "@/components/common/Button";
 
+/** Full-width top bar: logo on the left, the account avatar on the right. */
 export function Header({ onMenu }: { onMenu: () => void }) {
-  const path = usePathname();
   const { user } = useAuth();
-  const title =
-    NAVIGATION.find((item) => path === item.href || path.startsWith(item.href + "/"))?.label ||
-    "Không gian làm việc";
   return (
     <header className="app-header">
       <div className="flex min-w-0 items-center gap-3">
-        <Button
-          className="mobile-menu-button"
-          variant="ghost"
-          aria-label="Mở menu"
-          onClick={onMenu}
-        >
+        <Button className="mobile-menu-button" variant="ghost" aria-label="Mở menu" onClick={onMenu}>
           <Menu size={21} />
         </Button>
-        <div className="breadcrumbs">
-          <span>Không gian làm việc</span>
-          <ChevronRight size={14} />
-          <strong>{title}</strong>
-        </div>
-      </div>
-      <div className="header-actions">
-        <span className="demo-tag">
-          <span />
-          AI thử nghiệm
-        </span>
-        <ShieldCheck size={19} className="header-shield" />
-        <Link href="/profile" aria-label="Mở hồ sơ cá nhân" className="avatar avatar-small">
-          {initials(user?.name || "SC")}
+        <Link href="/dashboard" aria-label="SilicoCare – về trang tổng quan">
+          <Brand />
         </Link>
       </div>
+      <Link
+        href="/profile"
+        aria-label="Mở hồ sơ cá nhân"
+        title={user?.name}
+        className="avatar avatar-small"
+      >
+        {initials(user?.name || "SC")}
+      </Link>
     </header>
   );
 }

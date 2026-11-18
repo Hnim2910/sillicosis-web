@@ -93,9 +93,8 @@ export function ClinicalImport({
         </Button>
       </div>
       <p className="notice !mt-0">
-        Nhận .json, .csv, .xlsx, .txt (tối đa 2 MB). File chỉ được đọc trên máy này, không tải lên máy chủ. Tên cột
-        phải trùng tên trường trong file mẫu; các cột khác bị bỏ qua. Nhập file sẽ thay toàn bộ thông tin lâm sàng
-        đang có; hãy xem lại trước khi gửi.
+        Nhận .json, .csv, .xlsx, .txt (tối đa 2 MB), tên cột theo file mẫu. File chỉ được đọc trên máy này và
+        sẽ thay toàn bộ thông tin đang nhập.
       </p>
       {error && <Alert>{error}</Alert>}
       {parsed && (
@@ -114,7 +113,7 @@ export function ClinicalImport({
           <Button disabled={disabled || !rowValid} onClick={() => rowValid && apply(parsed, index)}>
             Điền hàng này
           </Button>
-          {rowValid && <small className="text-slate-500">{parsed.rows[index].label}</small>}
+          {rowValid && <small className="text-slate-600">{parsed.rows[index].label}</small>}
         </div>
       )}
       {summary && (

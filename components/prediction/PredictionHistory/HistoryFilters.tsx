@@ -1,7 +1,9 @@
 import { Input, Select } from "@/components/common/Input";
 import { OUTCOME_LABELS } from "@/constants/app";
 
+/** `query` is shown only when the list spans several patients (admin). */
 export function HistoryFilters({
+  showSearch,
   query,
   label,
   from,
@@ -11,6 +13,7 @@ export function HistoryFilters({
   onFrom,
   onTo,
 }: {
+  showSearch: boolean;
   query: string;
   label: string;
   from: string;
@@ -22,12 +25,14 @@ export function HistoryFilters({
 }) {
   return (
     <div className="toolbar">
-      <Input
-        label="Tìm kiếm"
-        placeholder="Tên hoặc mã bệnh nhân…"
-        value={query}
-        onChange={(event) => onQuery(event.target.value)}
-      />
+      {showSearch && (
+        <Input
+          label="Tìm kiếm"
+          placeholder="Tên hoặc mã bệnh nhân…"
+          value={query}
+          onChange={(event) => onQuery(event.target.value)}
+        />
+      )}
       <Select label="Kết quả" value={label} onChange={(event) => onLabel(event.target.value)}>
         <option value="">Tất cả kết quả</option>
         {Object.entries(OUTCOME_LABELS).map(([key, text]) => (

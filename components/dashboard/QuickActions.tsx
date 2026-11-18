@@ -6,7 +6,6 @@ import {
   ScanLine,
   ShieldCheck,
   UserRound,
-  UsersRound,
 } from "lucide-react";
 import type { Role } from "@/types/user";
 import { Card, CardHeader } from "@/components/common/Card";
@@ -24,27 +23,27 @@ export function QuickActions({ role }: { role: Role }) {
           {
             href: "/admin/records",
             title: "Quản lý bản ghi",
-            detail: "Tra cứu và xoá lượt khám",
+            detail: "Tra cứu và xoá lượt chẩn đoán",
             icon: ClipboardList,
           },
         ]
       : [
           {
             href: "/prediction",
-            title: "Phân tích ảnh X-quang",
-            detail: "Lưu một lượt khám và chạy dự đoán",
+            title: "Dự đoán mới",
+            detail: "Gửi thông tin lâm sàng và/hoặc ảnh X-quang",
             icon: ScanLine,
           },
           {
-            href: role === "patient" ? "/profile" : "/patients",
-            title: role === "patient" ? "Hồ sơ của tôi" : "Hồ sơ bệnh nhân",
+            href: "/profile",
+            title: "Hồ sơ của tôi",
             detail: "Cập nhật thông tin cá nhân",
-            icon: role === "patient" ? UserRound : UsersRound,
+            icon: UserRound,
           },
         ];
   return (
     <Card>
-      <CardHeader title="Truy cập nhanh" description="Các công việc thường dùng" />
+      <CardHeader title="Truy cập nhanh" />
       <div className="quick-list">
         {[
           ...actions,

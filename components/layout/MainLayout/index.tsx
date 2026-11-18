@@ -11,6 +11,7 @@ import { ErrorState } from "@/components/common/Feedback";
 import { useAuth } from "@/contexts/AuthContext";
 import { canAccessRoute } from "@/constants/navigation";
 
+/** Header across the full width; the sidebar sits under it on the left. */
 export function MainLayout({ children }: { children: ReactNode }) {
   const { user, loading, error, refresh } = useAuth();
   const router = useRouter();
@@ -20,17 +21,17 @@ export function MainLayout({ children }: { children: ReactNode }) {
     if (!loading && !user && !error) router.replace("/login");
   }, [loading, user, error, router]);
   if (error) return <ErrorState message={error} retry={refresh} />;
-  if (loading || !user) return <Loading label="Đang mở không gian làm việc…" />;
+  if (loading || !user) return <Loading />;
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
         Chuyển tới nội dung
       </a>
+      <Header onMenu={() => setMenuOpen(true)} />
       <aside className="desktop-sidebar">
         <Sidebar />
       </aside>
       <div className="workspace">
-        <Header onMenu={() => setMenuOpen(true)} />
         <main id="main-content" className="main-content">
           {canAccessRoute(pathname, user.role) ? (
             <Fragment key={`${user.id}:${user.role}`}>{children}</Fragment>
@@ -44,10 +45,6 @@ export function MainLayout({ children }: { children: ReactNode }) {
             </div>
           )}
         </main>
-        <footer className="app-footer">
-          <span>SilicoCare · Hỗ trợ sàng lọc bụi phổi silic</span>
-          <span>Dữ liệu và kết quả minh họa</span>
-        </footer>
       </div>
       <Modal open={menuOpen} title="Điều hướng" onClose={() => setMenuOpen(false)}>
         <Sidebar onNavigate={() => setMenuOpen(false)} />

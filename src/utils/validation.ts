@@ -1,4 +1,3 @@
-import type { PatientInput } from "@/types/patient";
 import { today } from "@/utils/format";
 
 export function validEmail(value: string) {
@@ -22,10 +21,6 @@ export function validPastDate(value: string) {
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
-export function validatePatient(input: PatientInput) {
-  if (input.name.trim().length < 2) return "Họ tên phải có ít nhất 2 ký tự.";
-  if (!validPastDate(input.birthDate)) return "Ngày sinh không hợp lệ.";
-  if (!input.occupation.trim()) return "Vui lòng nhập nghề nghiệp.";
-  if (!validVnMobile(input.phone)) return "Số điện thoại di động Việt Nam không hợp lệ.";
-  return "";
-}
+
+/** Same limit as the backend (app.profile.max-text-length) for exposure history and risk factors. */
+export const PROFILE_MAX_TEXT = 2000;

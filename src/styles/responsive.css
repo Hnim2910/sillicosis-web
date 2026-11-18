@@ -4,11 +4,8 @@
   }
 }
 @media (max-width: 1200px) {
-  .desktop-sidebar {
-    width: 218px;
-  }
-  .workspace {
-    margin-left: 218px;
+  :root {
+    --sidebar-width: 220px;
   }
   .main-content {
     padding: 26px 24px;
@@ -58,9 +55,6 @@
   .page-heading {
     align-items: flex-start;
   }
-  .page-heading h1 {
-    font-size: 25px;
-  }
 }
 @media (max-width: 760px) {
   .desktop-sidebar {
@@ -73,24 +67,10 @@
     display: inline-flex;
   }
   .app-header {
-    height: 65px;
-    padding: 0 18px;
-  }
-  .breadcrumbs > span,
-  .breadcrumbs > svg,
-  .header-shield {
-    display: none;
-  }
-  .header-actions {
-    gap: 13px;
+    padding: 0 16px;
   }
   .main-content {
-    padding: 24px 18px;
-  }
-  .app-footer {
-    padding: 18px;
-    font-size: 9px;
-    flex-wrap: wrap;
+    padding: 24px 16px;
   }
   .page-heading {
     flex-direction: column;
@@ -99,9 +79,6 @@
   }
   .page-actions {
     flex-wrap: wrap;
-  }
-  .page-heading h1 {
-    font-size: 24px;
   }
   .card-header {
     padding: 18px;
@@ -138,29 +115,8 @@
   .modal-body .sidebar-inner {
     padding: 0;
   }
-  .modal-body .sidebar-note {
-    display: none;
-  }
-  .modal-body .nav-label {
-    margin-top: 20px;
-  }
   .form-grid {
     gap: 14px;
-  }
-  .welcome-banner {
-    padding: 23px;
-  }
-  .welcome-banner .hero-icon {
-    width: 60px;
-  }
-  .welcome-banner h2 {
-    font-size: 18px;
-  }
-  .welcome-banner p {
-    font-size: 11px;
-  }
-  .stat-top {
-    font-size: 10px;
   }
   .stat-icon {
     width: 28px;
@@ -185,20 +141,6 @@
   }
   .timeline-row-grid {
     grid-template-columns: 1fr 1fr;
-  }
-  .welcome-banner .hero-icon {
-    display: none;
-  }
-  .steps {
-    gap: 7px;
-  }
-  .step {
-    gap: 5px;
-    font-size: 10px;
-  }
-  .step > span {
-    width: 21px;
-    height: 21px;
   }
   .toolbar .field {
     width: 100%;

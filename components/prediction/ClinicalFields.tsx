@@ -9,29 +9,32 @@ import { today } from "@/utils/format";
 
 /**
  * New Way clinical form: every field optional; choices show Vietnamese labels but hold the unaccented codes;
- * follow-up questions appear only when their main answer triggers them.
+ * follow-up questions appear only when their main answer triggers them. `hiddenKeys` are taken from the profile
+ * (gender, birth year) and not asked again.
  */
 export function ClinicalFields({
-  visitDate,
-  onVisitDateChange,
+  examDate,
+  onExamDateChange,
   value,
   onChange,
   errors,
   disabled,
+  hiddenKeys = [],
 }: {
-  visitDate: string;
-  onVisitDateChange: (value: string) => void;
+  examDate: string;
+  onExamDateChange: (value: string) => void;
   value: ClinicalDraft;
   onChange: (value: ClinicalDraft) => void;
   errors: Record<string, string>;
   disabled?: boolean;
+  hiddenKeys?: string[];
 }) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(CLINICAL_GROUPS.map((group) => [group.title, true])),
   );
 
   const visibleFields = (group: (typeof CLINICAL_GROUPS)[number]) =>
-    group.fields.filter((item) => isVisible(item, value));
+    group.fields.filter((item) => isVisible(item, value) && !hiddenKeys.includes(item.key));
 
   const toggleGroup = (group: string) =>
     setOpenGroups((current) => ({ ...current, [group]: !current[group] }));
@@ -46,9 +49,9 @@ export function ClinicalFields({
             type="date"
             min="1900-01-01"
             max={today()}
-            value={visitDate}
-            onChange={(event) => onVisitDateChange(event.target.value)}
-            error={errors.visitDate}
+            value={examDate}
+            onChange={(event) => onExamDateChange(event.target.value)}
+            error={errors.examDate}
             disabled={disabled}
             className="clinical-input-field clinical-input-field--date"
           />

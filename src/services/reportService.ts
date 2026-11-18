@@ -1,4 +1,4 @@
-import type { Visit } from "@/types/visit";
+import type { Prediction } from "@/types/prediction";
 import { CHANCE_LABEL, CLINICAL_RISK_TEXT, MODEL_LIMITATIONS, RESULT_NOTICE } from "@/constants/app";
 import { formatDate } from "@/utils/format";
 import {
@@ -8,16 +8,15 @@ import {
   formatPercent,
   mainChance,
   recommendationText,
-} from "@/utils/visitDisplay";
+} from "@/utils/predictionDisplay";
 import { loadImage } from "@/services/imageService";
 import { wrapText } from "@/utils/wrapText";
 
 export const reportService = {
-  /** `imageUrl`: object URL of the visit's X-ray (see useImageUrl), null for a clinical-only visit.
+  /** `imageUrl`: object URL of the screening's X-ray (see useImageUrl), null for a clinical-only screening.
    *  Only for a successful prediction. */
-  async download(visit: Visit, imageUrl: string | null) {
-    const prediction = visit.latestPrediction;
-    if (prediction?.status !== "SUCCESS") throw new Error("Lượt khám chưa có kết quả dự đoán.");
+  async download(prediction: Prediction, imageUrl: string | null) {
+    if (prediction.status !== "SUCCESS") throw new Error("Lượt chẩn đoán chưa có kết quả.");
     const { jsPDF } = await import("jspdf");
     await document.fonts.ready;
     const pdf = new jsPDF({ unit: "mm", format: "a4", compress: true });
@@ -64,8 +63,9 @@ export const reportService = {
     line("BÁO CÁO SÀNG LỌC BỤI PHỔI SILIC (THỬ NGHIỆM)", 34, true);
     line("KẾT QUẢ CỦA MÔ HÌNH AI · KHÔNG PHẢI KẾT QUẢ CHẨN ĐOÁN", 20);
     y += 20;
-    line(`Bệnh nhân: ${visit.patient.fullName} · ${visit.patient.code}`);
-    line(`Ngày khám: ${formatDate(visit.visitDate)}`);
+    if (prediction.user)
+      line(`Bệnh nhân: ${prediction.user.fullName}${prediction.user.code ? ` · ${prediction.user.code}` : ""}`);
+    line(`Ngày khám: ${formatDate(prediction.examDate)}`);
     const chance = mainChance(prediction);
     const level = clinicalRiskLevel(prediction);
     if (chance !== null) line(`${CHANCE_LABEL}: ${formatChance(chance)}`, 28, true);
@@ -88,28 +88,22 @@ export const reportService = {
       ctx.drawImage(image, 72, y, width, height);
       y += height + 35;
     } else {
-      line("Lượt khám không có ảnh X-quang; kết luận chỉ dựa trên thông tin lâm sàng.", 21);
+      line("Không có ảnh X-quang; kết luận chỉ dựa trên thông tin lâm sàng.", 21);
       y += 15;
     }
-    const rows = clinicalRows(visit);
+    const rows = clinicalRows(prediction);
     line("Thông tin lâm sàng", 25, true);
     if (!rows.length) line("Không nhập thông tin lâm sàng.", 21);
     for (const [label, value] of rows) line(`${label}: ${value}`, 21);
     y += 20;
     line("Chi tiết kỹ thuật", 20, true);
-    if (prediction.pLamSang !== null && prediction.pLamSang !== undefined) {
+    line(
+      `Điểm lâm sàng ${formatPercent(prediction.pLamSang ?? 0)} (ngưỡng ${formatPercent(prediction.nguongLamSang ?? 0)})`,
+      18,
+    );
+    if (prediction.coAnh)
       line(
-        `Điểm lâm sàng ${formatPercent(prediction.pLamSang)} (ngưỡng ${formatPercent(prediction.nguongLamSang ?? 0)})`,
-        18,
-      );
-      if (prediction.coAnh)
-        line(
-          `Điểm ảnh ${formatPercent(prediction.pAnh ?? 0)} · Điểm ghép ${formatPercent(prediction.pGhep ?? 0)} (ngưỡng ${formatPercent(prediction.nguongGhep ?? 0)})`,
-          18,
-        );
-    } else
-      line(
-        `Xác suất ${formatPercent(prediction.probability ?? 0)} (ngưỡng ${formatPercent(prediction.threshold ?? 0)})`,
+        `Điểm ảnh ${formatPercent(prediction.pAnh ?? 0)} · Điểm ghép ${formatPercent(prediction.pGhep ?? 0)} (ngưỡng ${formatPercent(prediction.nguongGhep ?? 0)})`,
         18,
       );
     y += 15;
@@ -117,6 +111,6 @@ export const reportService = {
     for (const limit of MODEL_LIMITATIONS) line(`• ${limit}`, 20);
     line(RESULT_NOTICE, 20);
     savePage();
-    pdf.save(`SilicoCare-${visit.patient.code}-${visit.visitDate}.pdf`);
+    pdf.save(`SilicoCare-${prediction.user?.code || "ket-qua"}-${prediction.examDate}.pdf`);
   },
 };

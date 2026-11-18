@@ -1,24 +1,23 @@
 import type { Role } from "@/types/user";
-import type { VisitOutcome } from "@/types/visit";
+import type { PredictionOutcome } from "@/types/prediction";
 import { apiRequest } from "@/lib/apiClient";
 import type { PageResponse } from "@/lib/apiClient";
-import { patientService } from "@/services/patientService";
-import { visitOutcome, visitService } from "@/services/visitService";
+import { predictionOutcome, predictionService } from "@/services/predictionService";
 
 export const dashboardService = {
-  /** Admin: every patient and visit. Patient: the signed-in account's own visits. */
+  /** Admin: every patient account and screening. Patient: the signed-in account's own screenings. */
   async getOverview(role: Role) {
-    const [patients, visits] =
+    const [patients, predictions] =
       role === "admin"
         ? await Promise.all([
-            apiRequest<PageResponse<unknown>>("/api/patients?size=1").then(
+            apiRequest<PageResponse<unknown>>("/api/users?role=USER&size=1").then(
               (page) => page.totalElements,
             ),
-            visitService.listAll(),
+            predictionService.listAll(),
           ])
-        : [1, await visitService.listForPatient((await patientService.getMine()).id)];
-    const counts: Record<VisitOutcome, number> = { Co: 0, Khong: 0, FAILED: 0, NONE: 0 };
-    for (const visit of visits) counts[visitOutcome(visit)] += 1;
-    return { patients, visits, counts };
+        : [1, await predictionService.listMine()];
+    const counts: Record<PredictionOutcome, number> = { Co: 0, Khong: 0, FAILED: 0 };
+    for (const prediction of predictions) counts[predictionOutcome(prediction)] += 1;
+    return { patients, predictions, counts };
   },
 };

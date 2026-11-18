@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
 
 // End-to-end against a running backend (see docs/testing.md). Skipped when the API or the
-// test accounts are not configured. Only the "creates a visit" test writes data, and only
-// with E2E_WRITE=1; it deletes the visit and image it created afterwards (needs the admin account).
+// test accounts are not configured. Only the write tests create data, and only with E2E_WRITE=1;
+// they delete the screening they created afterwards (needs the admin account).
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080").replace(/\/+$/, "");
 const ADMIN = { id: process.env.E2E_ADMIN_EMAIL, password: process.env.E2E_ADMIN_PASSWORD };
@@ -48,23 +48,21 @@ async function syntheticPng(page: Page, size: number) {
 test.describe("admin", () => {
   test.skip(!ADMIN.id || !ADMIN.password, "Thiếu E2E_ADMIN_EMAIL / E2E_ADMIN_PASSWORD");
 
-  test("signs in and opens users, patients, records and dashboard", async ({ page }) => {
+  test("signs in and opens users, records and dashboard", async ({ page }) => {
     await login(page, ADMIN);
     await expect(page).toHaveURL(/\/admin\/users$/);
     await expect(page.getByText("Danh sách tài khoản")).toBeVisible();
     await expect(page.getByRole("button", { name: /^Sửa tài khoản/ })).toHaveCount(0);
-    await page.goto("/patients");
-    await expect(page.getByText("Danh sách bệnh nhân")).toBeVisible();
     await page.goto("/admin/records");
-    await expect(page.getByText("Các lượt khám")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Quản lý bản ghi" })).toBeVisible();
     await page.goto("/dashboard");
-    await expect(page.getByText("Lượt khám gần đây")).toBeVisible();
+    await expect(page.getByText("Lượt chẩn đoán gần đây")).toBeVisible();
     await expect(page.getByText("Chỉ sử dụng cho mục đích demo")).toHaveCount(0);
   });
 });
 
-/** Deletes a visit (and its image) created by a write test; needs the admin account. */
-async function removeVisit(visitId: string) {
+/** Deletes a screening created by a write test; needs the admin account. */
+async function removePrediction(id: string) {
   if (!ADMIN.id || !ADMIN.password) return;
   const response = await fetch(`${API_URL}/api/auth/login`, {
     method: "POST",
@@ -73,29 +71,20 @@ async function removeVisit(visitId: string) {
   });
   const { accessToken } = (await response.json()) as { accessToken: string };
   const headers = { Authorization: `Bearer ${accessToken}` };
-  const visit = (await (await fetch(`${API_URL}/api/visits/${visitId}`, { headers })).json()) as {
-    image: { id: string } | null;
-  };
-  const removed = await fetch(`${API_URL}/api/visits/${visitId}`, { method: "DELETE", headers });
+  const removed = await fetch(`${API_URL}/api/predictions/${id}`, { method: "DELETE", headers });
   expect(removed.ok).toBe(true);
-  if (visit.image) {
-    const image = await fetch(`${API_URL}/api/images/${visit.image.id}`, {
-      method: "DELETE",
-      headers,
-    });
-    expect(image.ok).toBe(true);
-  }
 }
 
 test.describe("patient", () => {
   test.skip(!PATIENT.id || !PATIENT.password, "Thiếu E2E_PATIENT_EMAIL / E2E_PATIENT_PASSWORD");
 
-  test("rejects a too-small image before uploading", async ({ page }) => {
+  test("rejects a too-small image before sending", async ({ page }) => {
     await login(page, PATIENT);
     await expect(page).toHaveURL(/\/dashboard$/);
-    const uploads: string[] = [];
+    const sent: string[] = [];
     page.on("request", (request) => {
-      if (new URL(request.url()).pathname.startsWith("/api/images")) uploads.push(request.url());
+      if (request.method() === "POST" && new URL(request.url()).pathname === "/api/predictions")
+        sent.push(request.url());
     });
     await page.goto("/prediction");
     const small = await syntheticPng(page, 128);
@@ -103,9 +92,7 @@ test.describe("patient", () => {
       .getByLabel("Chọn ảnh X-quang")
       .setInputFiles({ name: "small.png", mimeType: "image/png", buffer: small });
     await expect(page.getByText("Ảnh quá nhỏ. Cạnh ngắn phải từ 256 pixel.")).toBeVisible();
-    // Nothing entered and no image: nothing to predict from.
-    await expect(page.getByRole("button", { name: "Lưu lượt khám & dự đoán" })).toBeDisabled();
-    expect(uploads).toEqual([]);
+    expect(sent).toEqual([]);
   });
 
   test("predicts from clinical data only, with follow-up questions", async ({ page }) => {
@@ -117,18 +104,18 @@ test.describe("patient", () => {
     await page.getByLabel("Ho", { exact: true }).selectOption({ label: "Có" });
     await page.getByLabel("Thời điểm ho").selectOption({ label: "Ban đêm" });
     await page.getByLabel("FVC % so với lý thuyết (%)").fill("72,5");
-    await page.getByRole("button", { name: "Lưu lượt khám & dự đoán" }).click();
+    await page.getByRole("button", { name: "Chẩn đoán", exact: true }).click();
     await expect(page).toHaveURL(/\/prediction\/[0-9a-f-]{36}$/, { timeout: 60_000 });
-    const visitId = page.url().split("/").pop()!;
+    const id = page.url().split("/").pop()!;
     await expect(
       page.getByText(/Khả năng có bất thường trên phim phổi|Nguy cơ (thấp|trung bình|cao)|Thử lại/).first(),
     ).toBeVisible();
     await expect(page.getByText("Ban đêm")).toBeVisible();
     await expect(page.getByText(/dương tính|âm tính/i)).toHaveCount(0);
-    await removeVisit(visitId);
+    await removePrediction(id);
   });
 
-  test("creates a visit, shows the AI result and lists it in history", async ({ page }) => {
+  test("sends an X-ray with clinical data, shows the result and lists it in history", async ({ page }) => {
     test.skip(process.env.E2E_WRITE !== "1", "Chỉ chạy khi E2E_WRITE=1 (ghi dữ liệu thật)");
     await login(page, PATIENT);
     await expect(page).toHaveURL(/\/dashboard$/);
@@ -138,21 +125,21 @@ test.describe("patient", () => {
       .getByLabel("Chọn ảnh X-quang")
       .setInputFiles({ name: "e2e-synthetic.png", mimeType: "image/png", buffer: image });
     await page.getByLabel("Chiều cao (cm)").fill("165");
-    const submit = page.getByRole("button", { name: "Lưu lượt khám & dự đoán" });
+    const submit = page.getByRole("button", { name: "Chẩn đoán", exact: true });
     // An image is only sent after confirming it is a frontal chest X-ray.
     await expect(submit).toBeDisabled();
     await page.getByLabel("Đây là phim X-quang ngực thẳng").check();
     await submit.click();
     await expect(page).toHaveURL(/\/prediction\/[0-9a-f-]{36}$/, { timeout: 60_000 });
-    const visitId = page.url().split("/").pop()!;
+    const id = page.url().split("/").pop()!;
     // Either a result or a prediction failure with retry; both are valid backend outcomes.
     await expect(
       page.getByText(/Khả năng có bất thường trên phim phổi|Nguy cơ (thấp|trung bình|cao)|Thử lại/).first(),
     ).toBeVisible();
     await expect(page.getByText("165 cm")).toBeVisible();
     await page.goto("/history");
-    await expect(page.locator(`a[href="/history/${visitId}"]`)).toBeVisible();
+    await expect(page.locator(`a[href="/history/${id}"]`)).toBeVisible();
 
-    await removeVisit(visitId);
+    await removePrediction(id);
   });
 });

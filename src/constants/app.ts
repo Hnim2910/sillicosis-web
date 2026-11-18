@@ -1,5 +1,5 @@
 import type { Role } from "@/types/user";
-import type { VisitOutcome } from "@/types/visit";
+import type { PredictionOutcome } from "@/types/prediction";
 
 export const ROLE_LABELS: Record<Role, string> = {
   patient: "Bệnh nhân",
@@ -7,11 +7,10 @@ export const ROLE_LABELS: Record<Role, string> = {
 };
 export const GENDER_LABELS = { male: "Nam", female: "Nữ", other: "Khác" };
 /** Short labels for lists and the dashboard; never "dương tính"/"âm tính" (screening only). */
-export const OUTCOME_LABELS: Record<VisitOutcome, string> = {
+export const OUTCOME_LABELS: Record<PredictionOutcome, string> = {
   Co: "Có nguy cơ",
   Khong: "Nguy cơ thấp",
   FAILED: "Dự đoán lỗi",
-  NONE: "Chưa dự đoán",
 };
 /** Recommendation under the main percentage; driven by the model's own flags (ket_luan_cuoi). */
 export const RECOMMENDATION_TEXT = {
@@ -32,9 +31,10 @@ export const CLINICAL_RISK_TEXT: Record<ClinicalRiskLevel, { label: string; advi
   medium: { label: "Nguy cơ trung bình", advice: "Khuyến nghị: nên chụp X-quang ngực." },
   high: { label: "Nguy cơ cao", advice: "Khuyến nghị: nên chụp X-quang ngực sớm." },
 };
-/** Vietnamese text for PredictionResponse.errorCode (silicosis-backend/docs/api-visits.md §8). */
+/** Vietnamese text for PredictionResponse.errorCode (silicosis-backend/docs/api-predictions.md). */
 export const PREDICTION_ERRORS: Record<string, string> = {
   PREDICT_UNAVAILABLE: "Dịch vụ phân tích đang không hoạt động. Vui lòng thử lại sau.",
+  PREDICT_DISABLED: "Chức năng phân tích đang tạm tắt. Vui lòng thử lại sau.",
   PREDICT_TIMEOUT: "Dịch vụ phân tích phản hồi quá lâu. Vui lòng thử lại.",
   PREDICT_IMAGE_REJECTED:
     "Dịch vụ phân tích từ chối ảnh này. Hãy dùng ảnh X-quang ngực thẳng rõ nét khác.",

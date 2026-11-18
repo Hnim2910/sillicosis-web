@@ -1,6 +1,6 @@
 import { CLINICAL_FIELDS, CLINICAL_MAX_TEXT } from "@/constants/clinicalFields";
 import type { ClinicalField } from "@/constants/clinicalFields";
-import type { LamSang } from "@/types/visit";
+import type { LamSang } from "@/types/prediction";
 
 // Form state of the New Way clinical fields. Every value is a string; "" means "not recorded".
 
@@ -62,9 +62,9 @@ export function hasClinicalValue(draft: ClinicalDraft) {
   return Object.keys(toLamSang(draft)).length > 0;
 }
 
-/** Server errors arrive as `extra.lam_sang.<column>`; this maps them back to the form keys. */
+/** Server errors arrive as `lamSang.<column>`; this maps them back to the form keys. */
 export function clinicalServerErrors(fieldErrors: Record<string, string>): Record<string, string> {
-  const prefix = "extra.lam_sang.";
+  const prefix = "lamSang.";
   return Object.fromEntries(
     Object.entries(fieldErrors)
       .filter(([key]) => key.startsWith(prefix))

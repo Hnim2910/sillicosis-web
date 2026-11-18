@@ -84,7 +84,9 @@ export function parseJsonText(text: string): ParsedClinicalFile {
     if (!item || typeof item !== "object" || Array.isArray(item)) return item;
     const record = item as Record<string, unknown>;
     const extra = record.extra as Record<string, unknown> | undefined;
-    return (extra && typeof extra === "object" && extra.lam_sang) || record.lam_sang || record;
+    return (
+      record.lamSang || (extra && typeof extra === "object" && extra.lam_sang) || record.lam_sang || record
+    );
   };
   const items = Array.isArray(data) ? data : [data];
   const records = items.map((item, index) => {

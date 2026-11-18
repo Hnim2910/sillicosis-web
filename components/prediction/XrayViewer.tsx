@@ -20,13 +20,13 @@ export function XrayViewer({ src, width, height }: { src: string; width: number;
             src={src}
             width={width}
             height={height}
-            alt="Ảnh X-quang của lượt khám"
+            alt="Ảnh X-quang của lượt chẩn đoán"
             unoptimized
           />
         </div>
       </div>
       <div className="viewer-controls">
-        <span className="text-xs text-slate-400">
+        <span className="text-sm text-slate-600">
           {width} × {height} px
         </span>
         <div className="flex items-center gap-1">
@@ -38,7 +38,7 @@ export function XrayViewer({ src, width, height }: { src: string; width: number;
           >
             <Minus size={16} />
           </Button>
-          <span className="text-xs text-slate-400">{Math.round(zoom * 100)}%</span>
+          <span className="text-sm text-slate-600">{Math.round(zoom * 100)}%</span>
           <Button
             variant="ghost"
             aria-label="Phóng to ảnh"

@@ -1,7 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { validPastDate, validatePatient, validVnMobile } from "@/utils/validation";
+import { validPastDate, validVnMobile } from "@/utils/validation";
 import { wrapText } from "@/utils/wrapText";
-import { emptyVisitDraft, toVisitClinical, validateVisitDraft } from "@/utils/visitForm";
 import {
   clinicalServerErrors,
   emptyClinicalDraft,
@@ -10,9 +9,16 @@ import {
   validateClinicalDraft,
 } from "@/utils/clinicalForm";
 import { CLINICAL_FIELDS } from "@/constants/clinicalFields";
-import { visitOutcome } from "@/services/visitService";
-import type { Prediction, Visit } from "@/types/visit";
-import { clinicalRiskLevel, formatChance, mainChance, recommendationText } from "@/utils/visitDisplay";
+import { predictionOutcome } from "@/services/predictionService";
+import type { Prediction } from "@/types/prediction";
+import {
+  clinicalRiskLevel,
+  clinicalRows,
+  formatChance,
+  mainChance,
+  recommendationText,
+  shortResult,
+} from "@/utils/predictionDisplay";
 import { CLINICAL_HIGH_RISK, CLINICAL_RISK_TEXT, RECOMMENDATION_TEXT } from "@/constants/app";
 
 // Pure functions only: no browser, no backend.
@@ -31,18 +37,6 @@ test("calendar validation rejects impossible dates and accepts leap days", () =>
   }
   expect(validPastDate("2000-02-29")).toBe(true);
   expect(validPastDate("2024-02-29")).toBe(true);
-  expect(
-    validatePatient({
-      name: "Bệnh nhân test",
-      birthDate: "2025-02-29",
-      gender: "",
-      phone: "",
-      occupation: "Gia công đá",
-      workplace: "",
-      exposureHistory: "",
-      riskFactors: "",
-    }),
-  ).toBe("Ngày sinh không hợp lệ.");
 });
 
 test("Vietnamese mobile numbers follow the backend rule", () => {
@@ -50,24 +44,6 @@ test("Vietnamese mobile numbers follow the backend rule", () => {
     expect(validVnMobile(value), value).toBe(true);
   for (const value of ["0212345678", "091234567", "12345"])
     expect(validVnMobile(value), value).toBe(false);
-});
-
-test("visit form applies the backend ranges and cross-field rules", () => {
-  expect(validateVisitDraft(emptyVisitDraft())).toEqual({});
-  const errors = validateVisitDraft({
-    ...emptyVisitDraft(),
-    visitDate: "9999-01-01",
-    systolicBp: "80",
-    diastolicBp: "90",
-    fvcL: "3",
-    fev1L: "3.5",
-    heightCm: "abc",
-  });
-  expect(Object.keys(errors).sort()).toEqual(["fev1L", "heightCm", "systolicBp", "visitDate"]);
-  const clinical = toVisitClinical({ ...emptyVisitDraft(), fvcL: "3.2", smoker: "no" });
-  expect(clinical.fvcL).toBe(3.2);
-  expect(clinical.smoker).toBe(false);
-  expect(clinical.weightKg).toBeNull();
 });
 
 test("clinical form sends unaccented codes, numbers and only visible follow-ups", () => {
@@ -92,7 +68,7 @@ test("clinical form sends unaccented codes, numbers and only visible follow-ups"
   expect(toLamSang(draft).tdho).toBeUndefined();
   const errors = validateClinicalDraft({ ...empty, fvc: "abc", gioitinh: "Nữ" });
   expect(Object.keys(errors).sort()).toEqual(["fvc", "gioitinh"]);
-  expect(clinicalServerErrors({ "extra.lam_sang.ho": "x", visitDate: "y" })).toEqual({ ho: "x" });
+  expect(clinicalServerErrors({ "lamSang.ho": "x", examDate: "y" })).toEqual({ ho: "x" });
   // No field for job level, province, blocks or B2/B10; codes never carry diacritics.
   const keys = CLINICAL_FIELDS.map((field) => field.key);
   for (const absent of ["tinh", "capbac", "b2", "b10"]) expect(keys).not.toContain(absent);
@@ -101,14 +77,12 @@ test("clinical form sends unaccented codes, numbers and only visible follow-ups"
       expect(option.code, field.key).toMatch(/^[ -~]+$/);
 });
 
-test("visit outcome reflects the latest prediction", () => {
-  const base = { latestPrediction: null } as unknown as Visit;
-  const withPrediction = (status: string, label: string | null) =>
-    ({ latestPrediction: { status, label } }) as unknown as Visit;
-  expect(visitOutcome(base)).toBe("NONE");
-  expect(visitOutcome(withPrediction("FAILED", null))).toBe("FAILED");
-  expect(visitOutcome(withPrediction("SUCCESS", "Co"))).toBe("Co");
-  expect(visitOutcome(withPrediction("SUCCESS", "Khong"))).toBe("Khong");
+test("outcome follows the model's final conclusion", () => {
+  const of = (status: string, ketLuanCuoi: boolean | null) =>
+    predictionOutcome({ status, ketLuanCuoi } as unknown as Prediction);
+  expect(of("FAILED", null)).toBe("FAILED");
+  expect(of("SUCCESS", true)).toBe("Co");
+  expect(of("SUCCESS", false)).toBe("Khong");
 });
 
 test("report wrapping preserves long notes and paragraph breaks", () => {
@@ -122,8 +96,8 @@ test("report wrapping preserves long notes and paragraph breaks", () => {
 
 test("result screen shows a whole-percent chance and a recommendation, never a threshold", () => {
   const base = {
-    id: "p", visitId: "v", imageId: null, status: "SUCCESS", probability: 0.3, label: "Co", threshold: 0.2,
-    modelName: "m", modelVersion: "1", errorCode: null, createdAt: "2026-01-01T00:00:00Z",
+    id: "p", user: null, examDate: "2026-01-01", lamSang: { ho: "Co", fvc: 3.5, gioitinh: "Nu" }, image: null,
+    status: "SUCCESS", modelName: "m", modelVersion: "1", errorCode: null, createdAt: "2026-01-01T00:00:00Z",
     pLamSang: 0.3, nguongLamSang: 0.2, baoNguyCoLamSang: true, coAnh: false, pAnh: null, pGhep: null,
     nguongGhep: null, baoNguyCoGhep: null, ketLuanCuoi: true, experimental: false, disclaimer: "",
   } as unknown as Prediction;
@@ -148,4 +122,12 @@ test("result screen shows a whole-percent chance and a recommendation, never a t
   expect(recommendationText(withImage)).toBe(RECOMMENDATION_TEXT.imageAtRisk);
   expect(recommendationText({ ...withImage, ketLuanCuoi: false })).toBe(RECOMMENDATION_TEXT.low);
   expect(mainChance({ ...base, status: "FAILED" })).toBeNull();
+  expect(shortResult({ ...base, pLamSang: 0.163, nguongLamSang: 0.0515 })).toBe(CLINICAL_RISK_TEXT.high.label);
+  expect(shortResult(withImage)).toBe("Khả năng 55%");
+  // Values sent are shown with their Vietnamese labels, in form order.
+  expect(clinicalRows(base)).toEqual([
+    ["Giới tính", "Nữ"],
+    ["Ho", "Có"],
+    ["FVC % so với lý thuyết", "3,5 %"],
+  ]);
 });

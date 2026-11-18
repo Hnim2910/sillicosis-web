@@ -1,7 +1,7 @@
 import { CircleAlert, ScanLine, ShieldCheck, TriangleAlert, UsersRound } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Role } from "@/types/user";
-import type { VisitOutcome } from "@/types/visit";
+import type { PredictionOutcome } from "@/types/prediction";
 import { Card } from "@/components/common/Card";
 
 export function StatCards({
@@ -13,7 +13,7 @@ export function StatCards({
   role: Role;
   patients: number;
   visits: number;
-  counts: Record<VisitOutcome, number>;
+  counts: Record<PredictionOutcome, number>;
 }) {
   const items: {
     label: string;
@@ -25,25 +25,25 @@ export function StatCards({
     ...(role === "admin"
       ? [
           {
-            label: "Hồ sơ bệnh nhân",
+            label: "Bệnh nhân",
             value: patients,
-            caption: "Tổng số hồ sơ trong hệ thống",
+            caption: "Tài khoản bệnh nhân",
             icon: UsersRound,
             color: "",
           },
         ]
       : []),
     {
-      label: "Lượt khám",
+      label: "Lượt chẩn đoán",
       value: visits,
-      caption: role === "admin" ? "Của mọi bệnh nhân" : "Đã lưu vào lịch sử",
+      caption: role === "admin" ? "Của mọi bệnh nhân" : "Trong lịch sử",
       icon: ScanLine,
       color: "blue",
     },
     {
       label: "Nghi bụi phổi silic",
       value: counts.Co,
-      caption: "Theo kết quả AI gần nhất của mỗi lượt",
+      caption: "Theo kết quả AI",
       icon: TriangleAlert,
       color: "amber",
     },
@@ -53,15 +53,15 @@ export function StatCards({
           {
             label: "Không phát hiện",
             value: counts.Khong,
-            caption: "Theo kết quả AI gần nhất của mỗi lượt",
+            caption: "Theo kết quả AI",
             icon: ShieldCheck,
             color: "",
           },
         ]),
     {
-      label: "Lỗi / chưa dự đoán",
-      value: counts.FAILED + counts.NONE,
-      caption: "Cần chạy lại dự đoán",
+      label: "Dự đoán lỗi",
+      value: counts.FAILED,
+      caption: "Cần thử lại",
       icon: CircleAlert,
       color: "purple",
     },
