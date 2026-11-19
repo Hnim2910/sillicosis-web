@@ -18,6 +18,31 @@ export function parseClinicalNumber(value: string): number | null {
   return Number.isFinite(number) ? number : null;
 }
 
+/** Typing filter for number fields: digits and one decimal separator ("," or "."); anything else is dropped. */
+export function sanitizeNumberInput(value: string): string {
+  let seen = false;
+  let out = "";
+  for (const char of value) {
+    if (char >= "0" && char <= "9") out += char;
+    else if ((char === "," || char === ".") && !seen && out) {
+      seen = true;
+      out += char;
+    }
+  }
+  return out.slice(0, 12);
+}
+
+const numberText = (value: number) => String(value).replace(".", ",");
+
+/** "Phải trong khoảng 100–220." for a number outside the field's range, "" otherwise. */
+export function rangeError(field: ClinicalField, value: number): string {
+  if (field.min !== undefined && value < field.min)
+    return `Phải trong khoảng ${numberText(field.min)}–${numberText(field.max ?? field.min)}.`;
+  if (field.max !== undefined && value > field.max)
+    return `Phải trong khoảng ${numberText(field.min ?? 0)}–${numberText(field.max)}.`;
+  return "";
+}
+
 /** A follow-up question is shown only while its main question has the triggering answer. */
 export function isVisible(field: ClinicalField, draft: ClinicalDraft) {
   return !field.parent || draft[field.parent.key] === field.parent.when;
@@ -38,7 +63,11 @@ export function validateClinicalDraft(draft: ClinicalDraft): Record<string, stri
   for (const field of CLINICAL_FIELDS) {
     const value = (draft[field.key] ?? "").trim();
     if (!value || !isVisible(field, draft)) continue;
-    if (field.kind === "so" && parseClinicalNumber(value) === null) errors[field.key] = "Phải là số.";
+    if (field.kind === "so") {
+      const number = parseClinicalNumber(value);
+      if (number === null) errors[field.key] = "Phải là số.";
+      else if (rangeError(field, number)) errors[field.key] = rangeError(field, number);
+    }
     if (field.kind === "chu" && value.length > CLINICAL_MAX_TEXT)
       errors[field.key] = `Tối đa ${CLINICAL_MAX_TEXT} ký tự.`;
     if (field.kind === "muc" && !field.options?.some((option) => option.code === value))

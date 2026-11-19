@@ -12,14 +12,20 @@ import { CLINICAL_FIELDS } from "@/constants/clinicalFields";
 import { predictionOutcome } from "@/services/predictionService";
 import type { Prediction } from "@/types/prediction";
 import {
-  clinicalRiskLevel,
   clinicalRows,
   formatChance,
   mainChance,
-  recommendationText,
+  resultInsight,
   shortResult,
 } from "@/utils/predictionDisplay";
-import { CLINICAL_HIGH_RISK, CLINICAL_RISK_TEXT, RECOMMENDATION_TEXT } from "@/constants/app";
+import { sanitizeNumberInput } from "@/utils/clinicalForm";
+import {
+  needsProfileSetup,
+  profileTieuSuDraft,
+  profileWithTieuSu,
+  tieuSuChanges,
+} from "@/utils/tieuSu";
+import type { User } from "@/types/user";
 
 // Pure functions only: no browser, no backend.
 
@@ -73,8 +79,7 @@ test("clinical form sends unaccented codes, numbers and only visible follow-ups"
   const keys = CLINICAL_FIELDS.map((field) => field.key);
   for (const absent of ["tinh", "capbac", "b2", "b10"]) expect(keys).not.toContain(absent);
   for (const field of CLINICAL_FIELDS)
-    for (const option of field.options ?? [])
-      expect(option.code, field.key).toMatch(/^[ -~]+$/);
+    for (const option of field.options ?? []) expect(option.code, field.key).toMatch(/^[ -~]+$/);
 });
 
 test("outcome follows the model's final conclusion", () => {
@@ -94,40 +99,145 @@ test("report wrapping preserves long notes and paragraph breaks", () => {
   expect(lines.every((line) => line.length <= 50)).toBe(true);
 });
 
-test("result screen shows a whole-percent chance and a recommendation, never a threshold", () => {
+test("results use only three labels; the percentage appears only with an X-ray", () => {
   const base = {
-    id: "p", user: null, examDate: "2026-01-01", lamSang: { ho: "Co", fvc: 3.5, gioitinh: "Nu" }, image: null,
-    status: "SUCCESS", modelName: "m", modelVersion: "1", errorCode: null, createdAt: "2026-01-01T00:00:00Z",
-    pLamSang: 0.3, nguongLamSang: 0.2, baoNguyCoLamSang: true, coAnh: false, pAnh: null, pGhep: null,
-    nguongGhep: null, baoNguyCoGhep: null, ketLuanCuoi: true, experimental: false, disclaimer: "",
+    id: "p",
+    user: null,
+    examDate: "2026-01-01",
+    lamSang: { ho: "Co", fvc: 85, gioitinh: "Nu" },
+    image: null,
+    status: "SUCCESS",
+    modelName: "m",
+    modelVersion: "1",
+    errorCode: null,
+    createdAt: "2026-01-01T00:00:00Z",
+    pLamSang: 0.3,
+    nguongLamSang: 0.2,
+    baoNguyCoLamSang: true,
+    coAnh: false,
+    pAnh: null,
+    pGhep: null,
+    nguongGhep: null,
+    baoNguyCoGhep: null,
+    ketLuanCuoi: true,
+    experimental: false,
+    disclaimer: "",
   } as unknown as Prediction;
   expect(formatChance(0.163)).toBe("16%");
   expect(formatChance(0.004)).toBe("<1%");
-  expect(mainChance(base)).toBeNull(); // clinical only: no % for now
-  // Clinical only: risk level, lower edge = nguong_lam_sang from the response, upper edge CLINICAL_HIGH_RISK.
-  const level = (p: number) => clinicalRiskLevel({ ...base, pLamSang: p, nguongLamSang: 0.0515 });
-  expect(level(0.04)).toBe("low");
-  expect(level(0.0515)).toBe("medium");
-  expect(level(0.1)).toBe("medium");
-  expect(level(0.15)).toBe("high");
-  expect(level(0.163)).toBe("high");
-  expect(CLINICAL_HIGH_RISK).toBe(0.15);
-  expect(clinicalRiskLevel({ ...base, pLamSang: 0.04, nguongLamSang: 0.03 })).toBe("medium");
-  expect(recommendationText({ ...base, pLamSang: 0.04, nguongLamSang: 0.0515 })).toBe(CLINICAL_RISK_TEXT.low.advice);
-  expect(recommendationText({ ...base, pLamSang: 0.1, nguongLamSang: 0.0515 })).toBe(CLINICAL_RISK_TEXT.medium.advice);
-  expect(recommendationText({ ...base, pLamSang: 0.163, nguongLamSang: 0.0515 })).toBe(CLINICAL_RISK_TEXT.high.advice);
-  const withImage = { ...base, coAnh: true, pAnh: 0.7, pGhep: 0.55, ketLuanCuoi: true };
+  expect(mainChance(base)).toBeNull();
+  expect(shortResult(base)).toBe("Có nguy cơ");
+  expect(shortResult({ ...base, ketLuanCuoi: false })).toBe("Nguy cơ thấp");
+  expect(shortResult({ ...base, status: "FAILED" })).toBe("Bị lỗi");
+  const withImage = {
+    ...base,
+    coAnh: true,
+    pAnh: 0.7,
+    pGhep: 0.55,
+    nguongGhep: 0.207,
+    ketLuanCuoi: true,
+  };
   expect(mainChance(withImage)).toBe(0.55);
-  expect(clinicalRiskLevel(withImage)).toBeNull();
-  expect(recommendationText(withImage)).toBe(RECOMMENDATION_TEXT.imageAtRisk);
-  expect(recommendationText({ ...withImage, ketLuanCuoi: false })).toBe(RECOMMENDATION_TEXT.low);
-  expect(mainChance({ ...base, status: "FAILED" })).toBeNull();
-  expect(shortResult({ ...base, pLamSang: 0.163, nguongLamSang: 0.0515 })).toBe(CLINICAL_RISK_TEXT.high.label);
-  expect(shortResult(withImage)).toBe("Khả năng 55%");
+  expect(shortResult(withImage)).toBe("Có nguy cơ · 55%");
+  expect(mainChance({ ...withImage, status: "FAILED" })).toBeNull();
   // Values sent are shown with their Vietnamese labels, in form order.
   expect(clinicalRows(base)).toEqual([
     ["Giới tính", "Nữ"],
     ["Ho", "Có"],
-    ["FVC % so với lý thuyết", "3,5 %"],
+    ["FVC % so với lý thuyết", "85 %"],
   ]);
+});
+
+test("comment and advice follow the image, the threshold and what was recorded", () => {
+  const base = {
+    status: "SUCCESS",
+    coAnh: true,
+    pGhep: 0.55,
+    nguongGhep: 0.207,
+    ketLuanCuoi: true,
+    lamSang: { tuoinghe: 12, ho: "Co", khotho: "Co", hutthuoc: "Co hut thuoc" },
+  } as unknown as Prediction;
+  const atRisk = resultInsight(base)!;
+  expect(atRisk.comment).toContain("55%");
+  expect(atRisk.comment).toContain("cao hơn ngưỡng sàng lọc 21%");
+  expect(atRisk.comment).toContain("tuổi nghề 12 năm, có ho và khó thở và đang hút thuốc");
+  expect(atRisk.advice[0]).toContain("chuyên khoa hô hấp");
+  expect(atRisk.advice.some((line) => line.startsWith("Ngừng hút thuốc"))).toBe(true);
+  const clinicalLow = resultInsight({
+    ...base,
+    coAnh: false,
+    ketLuanCuoi: false,
+    lamSang: { ho: "Co" },
+  } as Prediction)!;
+  expect(clinicalLow.comment).toContain("chưa dựa trên phim X-quang");
+  expect(clinicalLow.advice[0]).toContain("chụp X-quang ngực thẳng");
+  expect(clinicalLow.advice.some((line) => line.includes("Bạn có ghi nhận ho"))).toBe(true);
+  expect(clinicalLow.advice.some((line) => line.startsWith("Ngừng hút thuốc"))).toBe(false);
+  expect(resultInsight({ ...base, status: "FAILED" } as Prediction)).toBeNull();
+});
+
+test("number fields only keep digits and one decimal separator; ranges are checked", () => {
+  expect(sanitizeNumberInput("12a,5.3kg")).toBe("12,53");
+  expect(sanitizeNumberInput(",5")).toBe("5");
+  expect(sanitizeNumberInput("-3")).toBe("3");
+  const errors = validateClinicalDraft({
+    ...emptyClinicalDraft(),
+    cao: "300",
+    fvc: "85,5",
+    tuoinghe: "71",
+  });
+  expect(errors).toEqual({
+    cao: "Phải trong khoảng 100–220.",
+    tuoinghe: "Phải trong khoảng 0–70.",
+  });
+});
+
+test("tiểu sử: pre-filled from the profile, differences listed, saved with the codes of the form", () => {
+  const user = {
+    id: "u",
+    code: "BN-000001",
+    name: "Người Thử",
+    email: "a@example.com",
+    phone: "",
+    role: "patient",
+    active: true,
+    birthDate: "1980-05-06",
+    gender: "female",
+    tieuSu: { cviec: "Thợ mài đá", tuoinghe: 12.5, hutthuoc: "Khong hut thuoc" },
+  } as User;
+  const draft = { ...emptyClinicalDraft(), ...profileTieuSuDraft(user) };
+  expect(draft).toMatchObject({
+    gioitinh: "Nu",
+    namsinh: "1980",
+    cviec: "Thợ mài đá",
+    tuoinghe: "12,5",
+  });
+  expect(tieuSuChanges(user, draft)).toEqual([]);
+  // Same number written differently is not a change; a new value and a cleared one are.
+  let edited = setClinicalValue(draft, "tuoinghe", "12,50");
+  edited = setClinicalValue(edited, "pxuong", "Nghiền sàng");
+  edited = setClinicalValue(edited, "cviec", "");
+  edited = setClinicalValue(edited, "fvc", "80"); // not tiểu sử
+  edited = setClinicalValue(edited, "namsinh", "1999"); // never offered: comes from the birth date
+  expect(tieuSuChanges(user, edited)).toEqual([
+    { key: "cviec", label: "Công việc hiện tại", saved: "Thợ mài đá", current: "-" },
+    { key: "pxuong", label: "Phân xưởng / bộ phận", saved: "-", current: "Nghiền sàng" },
+  ]);
+  expect(profileWithTieuSu(user, setClinicalValue(edited, "gioitinh", "Nam"))).toEqual({
+    name: "Người Thử",
+    email: "a@example.com",
+    phone: "",
+    birthDate: "1980-05-06",
+    gender: "male",
+    tieuSu: { pxuong: "Nghiền sàng", tuoinghe: 12.5, hutthuoc: "Khong hut thuoc" },
+  });
+  // A session object created before tiểu sử existed (e.g. kept across a hot reload) must not crash the form.
+  const stale = { ...user, tieuSu: undefined } as unknown as User;
+  expect(profileTieuSuDraft(stale)).toMatchObject({ gioitinh: "Nu", namsinh: "1980", cviec: "" });
+  expect(tieuSuChanges(stale, draft).map((change) => change.key)).toContain("cviec");
+  expect(needsProfileSetup(user)).toBe(false);
+  expect(needsProfileSetup({ ...user, gender: "", birthDate: "", tieuSu: {} })).toBe(true);
+  expect(needsProfileSetup({ ...user, role: "admin", gender: "", birthDate: "", tieuSu: {} })).toBe(
+    false,
+  );
 });

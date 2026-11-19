@@ -4,11 +4,33 @@ export function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-/** Same rule as the backend: 8–72 characters with at least one letter and one digit. */
+/** Requirements of a new password, in display order (same rule as the backend's @StrongPassword). */
+export const PASSWORD_REQUIREMENTS: {
+  id: string;
+  label: string;
+  test: (value: string) => boolean;
+}[] = [
+  {
+    id: "length",
+    label: "Từ 8 đến 72 ký tự",
+    test: (value) => value.length >= 8 && value.length <= 72,
+  },
+  { id: "lower", label: "Có ít nhất 1 chữ thường (a–z)", test: (value) => /\p{Ll}/u.test(value) },
+  { id: "upper", label: "Có ít nhất 1 chữ hoa (A–Z)", test: (value) => /\p{Lu}/u.test(value) },
+  { id: "digit", label: "Có ít nhất 1 chữ số (0–9)", test: (value) => /\d/.test(value) },
+  {
+    id: "special",
+    label: "Có ít nhất 1 ký tự đặc biệt (ví dụ ! @ # $ % & *)",
+    test: (value) => /[^\p{L}\d\s]/u.test(value),
+  },
+  { id: "space", label: "Không chứa khoảng trắng", test: (value) => !!value && !/\s/.test(value) },
+];
+
 export function validPassword(value: string) {
-  return /^(?=.*\p{L})(?=.*\d).{8,72}$/u.test(value);
+  return PASSWORD_REQUIREMENTS.every((rule) => rule.test(value));
 }
-export const PASSWORD_RULE = "8–72 ký tự, có ít nhất 1 chữ cái và 1 chữ số.";
+export const PASSWORD_RULE =
+  "8–72 ký tự, gồm chữ hoa, chữ thường, chữ số và ký tự đặc biệt, không chứa khoảng trắng.";
 
 /** Vietnamese mobile number; the backend normalises it and has the final say. */
 export function validVnMobile(value: string) {
@@ -20,7 +42,3 @@ export function validPastDate(value: string) {
   const date = new Date(value);
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
-
-
-/** Same limit as the backend (app.profile.max-text-length) for exposure history and risk factors. */
-export const PROFILE_MAX_TEXT = 2000;

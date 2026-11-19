@@ -52,7 +52,7 @@ Mỗi service giữ kiểu dữ liệu backend ở nội bộ và trả kiểu c
 
 Ảnh: `imageService.prepare` kiểm tra định dạng/kích thước ở trình duyệt, `upload` gửi multipart (ảnh trùng → dùng lại id cũ), `contentUrl` tải ảnh có token thành object URL; `useImageUrl` giải phóng URL khi đổi ảnh.
 
-Lượt khám: tạo lượt khám kèm `imageId` thì backend tự chạy dự đoán. `POST /api/visits/{id}/predictions` chạy lại; dịch vụ dự đoán lỗi vẫn trả 201 với trạng thái `FAILED` và mã lỗi được dịch sang tiếng Việt (`PREDICTION_ERRORS`).
+Lượt khám: tạo lượt khám kèm `imageId` thì backend tự chạy chẩn đoán. `POST /api/visits/{id}/predictions` chạy lại; dịch vụ chẩn đoán lỗi vẫn trả 201 với trạng thái `FAILED` và mã lỗi được dịch sang tiếng Việt (`PREDICTION_ERRORS`).
 
 Các màn hình: `/login`, `/register`, `/forgot-password`, `/dashboard`, `/patients`, `/patients/[id]`, `/prediction`, `/prediction/[id]`, `/history`, `/history/[id]`, `/profile`, `/admin/users`, `/admin/records`. `/prediction/[id]` và `/history/[id]` cùng hiển thị một lượt khám theo id.
 

@@ -6,31 +6,23 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: "Quản trị viên",
 };
 export const GENDER_LABELS = { male: "Nam", female: "Nữ", other: "Khác" };
-/** Short labels for lists and the dashboard; never "dương tính"/"âm tính" (screening only). */
+/** The only three result labels, for screenings with and without an X-ray (team decision). Never
+ *  "dương tính"/"âm tính": this is screening only. */
 export const OUTCOME_LABELS: Record<PredictionOutcome, string> = {
   Co: "Có nguy cơ",
   Khong: "Nguy cơ thấp",
-  FAILED: "Dự đoán lỗi",
+  FAILED: "Bị lỗi",
 };
-/** Recommendation under the main percentage; driven by the model's own flags (ket_luan_cuoi). */
-export const RECOMMENDATION_TEXT = {
-  imageAtRisk: "Khuyến nghị: nên đọc phim chuyên khoa / khám chuyên sâu.",
-  low: "Nguy cơ thấp theo mô hình.",
+export const OUTCOME_TONES: Record<PredictionOutcome, "warning" | "success" | "danger"> = {
+  Co: "warning",
+  Khong: "success",
+  FAILED: "danger",
 };
-export const CHANCE_LABEL = "Khả năng có bất thường trên phim phổi";
-
-/** Upper risk band for clinical-only results (p_lam_sang). Mốc lấy từ OOF dev bước 6 (New Way), khoảng 10% người
- *  có điểm cao nhất; không dùng tập test. The lower band edge is nguong_lam_sang from each response, never hardcoded. */
-export const CLINICAL_HIGH_RISK = 0.15;
-
-export type ClinicalRiskLevel = "low" | "medium" | "high";
-
-/** Shown instead of a percentage when there is no X-ray (user's decision). */
-export const CLINICAL_RISK_TEXT: Record<ClinicalRiskLevel, { label: string; advice: string }> = {
-  low: { label: "Nguy cơ thấp", advice: "Chưa cần chụp phim ngay, theo dõi định kỳ." },
-  medium: { label: "Nguy cơ trung bình", advice: "Khuyến nghị: nên chụp X-quang ngực." },
-  high: { label: "Nguy cơ cao", advice: "Khuyến nghị: nên chụp X-quang ngực sớm." },
-};
+/** The percentage is shown only for screenings with an X-ray (fused score p_ghep). */
+export const CHANCE_LABEL = "Điểm nguy cơ (ảnh X-quang + lâm sàng)";
+/** Shown on every clinical-only result. */
+export const NO_IMAGE_NOTE =
+  "Kết quả chỉ dựa trên thông tin lâm sàng. Nên bổ sung phim X-quang ngực thẳng để kết quả chính xác và đầy đủ hơn.";
 /** Vietnamese text for PredictionResponse.errorCode (silicosis-backend/docs/api-predictions.md). */
 export const PREDICTION_ERRORS: Record<string, string> = {
   PREDICT_UNAVAILABLE: "Dịch vụ phân tích đang không hoạt động. Vui lòng thử lại sau.",
@@ -49,8 +41,8 @@ export const RESULT_NOTICE =
 /** Limits of the New Way model, shown next to every result and in the PDF report.
  *  No comparison with the training data or an average is shown anywhere (user's decision). */
 export const MODEL_LIMITATIONS = [
-  "Đây là công cụ hỗ trợ sàng lọc, không phải chẩn đoán; không thay thế đánh giá của bác sĩ.",
+  "Đây là công cụ hỗ trợ sàng lọc; kết quả không thay thế chẩn đoán và đánh giá của bác sĩ.",
   "Khi có phim X-quang ngực thẳng, kết luận chủ yếu dựa vào ảnh.",
-  "Khi chỉ có thông tin lâm sàng, kết quả mang tính gợi ý đi chụp phim, chưa phải nghi bệnh.",
+  "Khi chỉ có thông tin lâm sàng, kết quả mang tính gợi ý có nên chụp phim hay không, chưa phải nghi bệnh.",
 ];
 export const MODEL_SCOPE_NOTICE = MODEL_LIMITATIONS.join(" ");

@@ -1,7 +1,11 @@
-import { Input, Select } from "@/components/common/Input";
+"use client";
+import { useState } from "react";
+import { Search, X } from "lucide-react";
 import { OUTCOME_LABELS } from "@/constants/app";
+import { Dropdown } from "@/components/common/Dropdown";
+import { DatePicker } from "@/components/common/DatePicker";
 
-/** `query` is shown only when the list spans several patients (admin). */
+/** Filter bar above the table: risk label, visit date range and (admin lists) a patient search. */
 export function HistoryFilters({
   showSearch,
   query,
@@ -12,6 +16,8 @@ export function HistoryFilters({
   onLabel,
   onFrom,
   onTo,
+  onClear,
+  dateError,
 }: {
   showSearch: boolean;
   query: string;
@@ -22,37 +28,74 @@ export function HistoryFilters({
   onLabel: (value: string) => void;
   onFrom: (value: string) => void;
   onTo: (value: string) => void;
+  onClear: () => void;
+  dateError: boolean;
 }) {
+  const [text, setText] = useState(query);
+  const active = !!label || !!from || !!to || !!query;
   return (
-    <div className="toolbar">
-      {showSearch && (
-        <Input
-          label="Tìm kiếm"
-          placeholder="Tên hoặc mã bệnh nhân…"
-          value={query}
-          onChange={(event) => onQuery(event.target.value)}
+    <div className="filter-bar" role="search">
+      <div className="filter-bar__item filter-bar__label">
+        <Dropdown
+          ariaLabel="Lọc theo nhãn rủi ro"
+          value={label}
+          placeholder="-- Chọn nhãn rủi ro --"
+          options={Object.entries(OUTCOME_LABELS).map(([value, text]) => ({ value, label: text }))}
+          onChange={onLabel}
         />
+      </div>
+      <div className="filter-bar__range" aria-label="Khoảng ngày khám">
+        <span className="filter-bar__caption">Ngày khám</span>
+        <div className="filter-bar__item filter-bar__date">
+          <DatePicker ariaLabel="Ngày khám từ" value={from} invalid={dateError} onChange={onFrom} />
+        </div>
+        <span className="filter-bar__dash" aria-hidden="true">
+          –
+        </span>
+        <div className="filter-bar__item filter-bar__date">
+          <DatePicker ariaLabel="Ngày khám đến" value={to} invalid={dateError} onChange={onTo} />
+        </div>
+      </div>
+      {showSearch && (
+        <form
+          className="filter-bar__search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onQuery(text);
+          }}
+        >
+          <input
+            aria-label="Tìm theo tên hoặc mã bệnh nhân"
+            placeholder="Tên hoặc mã bệnh nhân"
+            value={text}
+            onChange={(event) => {
+              setText(event.target.value);
+              if (!event.target.value) onQuery("");
+            }}
+          />
+          <button type="submit" aria-label="Tìm kiếm">
+            <Search size={17} />
+          </button>
+        </form>
       )}
-      <Select label="Kết quả" value={label} onChange={(event) => onLabel(event.target.value)}>
-        <option value="">Tất cả kết quả</option>
-        {Object.entries(OUTCOME_LABELS).map(([key, text]) => (
-          <option key={key} value={key}>
-            {text}
-          </option>
-        ))}
-      </Select>
-      <Input
-        label="Khám từ ngày"
-        type="date"
-        value={from}
-        onChange={(event) => onFrom(event.target.value)}
-      />
-      <Input
-        label="Đến ngày khám"
-        type="date"
-        value={to}
-        onChange={(event) => onTo(event.target.value)}
-      />
+      {active && (
+        <button
+          type="button"
+          className="filter-bar__clear"
+          onClick={() => {
+            setText("");
+            onClear();
+          }}
+        >
+          <X size={15} />
+          Xoá bộ lọc
+        </button>
+      )}
+      {dateError && (
+        <p className="filter-bar__error" role="alert">
+          Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.
+        </p>
+      )}
     </div>
   );
 }

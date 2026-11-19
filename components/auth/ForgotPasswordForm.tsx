@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { Input } from "@/components/common/Input";
+import { OtpInput } from "@/components/auth/OtpInput";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Button } from "@/components/common/Button";
 import { Alert } from "@/components/common/Feedback";
 import { authService } from "@/services/authService";
@@ -29,7 +31,6 @@ export function ForgotPasswordForm() {
   const [resetToken, setResetToken] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -55,7 +56,7 @@ export function ForgotPasswordForm() {
   // Same message whether or not the email is registered.
   const sendCode = () =>
     run(async () => {
-      setNotice(await authService.forgotPassword(email));
+      await authService.forgotPassword(email);
       setOtp("");
       setStep("otp");
       setCountdown(RESEND_SECONDS);
@@ -65,7 +66,6 @@ export function ForgotPasswordForm() {
     run(async () => {
       try {
         setResetToken(await authService.verifyOtp(email, otp));
-        setNotice("");
         setStep("password");
       } catch (reason) {
         if (reason instanceof ApiError && reason.code === "OTP_ATTEMPTS_EXCEEDED") setOtp("");
@@ -98,7 +98,6 @@ export function ForgotPasswordForm() {
       <p className="auth-description">{STEP_TEXT[step]}</p>
       <div className="stack">
         {error && <Alert>{error}</Alert>}
-        {notice && step === "otp" && <Alert tone="info">{notice}</Alert>}
         {step === "email" && (
           <form
             className="stack"
@@ -129,16 +128,10 @@ export function ForgotPasswordForm() {
               void verify();
             }}
           >
-            <Input
-              label="Mã xác nhận"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              required
-              maxLength={6}
-              value={otp}
-              onChange={(event) => setOtp(event.target.value.replace(/\D/g, "").slice(0, 6))}
-              placeholder="6 chữ số"
-            />
+            <div className="field">
+              <label>Mã xác nhận</label>
+              <OtpInput value={otp} onChange={setOtp} disabled={busy} />
+            </div>
             <div className="otp-resend">
               <button type="button" onClick={() => setStep("email")}>
                 Đổi email
@@ -164,9 +157,8 @@ export function ForgotPasswordForm() {
               void reset();
             }}
           >
-            <Input
+            <PasswordInput
               label="Mật khẩu mới"
-              type="password"
               autoComplete="new-password"
               required
               maxLength={72}
@@ -174,9 +166,8 @@ export function ForgotPasswordForm() {
               onChange={(event) => setPassword(event.target.value)}
               error={password && !validPassword(password) ? `Cần ${PASSWORD_RULE}` : undefined}
             />
-            <Input
+            <PasswordInput
               label="Xác nhận mật khẩu mới"
-              type="password"
               autoComplete="new-password"
               required
               value={confirm}

@@ -41,7 +41,7 @@ export function StatCards({
       color: "blue",
     },
     {
-      label: "Nghi bụi phổi silic",
+      label: "Có nguy cơ",
       value: counts.Co,
       caption: "Theo kết quả AI",
       icon: TriangleAlert,
@@ -51,7 +51,7 @@ export function StatCards({
       ? []
       : [
           {
-            label: "Không phát hiện",
+            label: "Nguy cơ thấp",
             value: counts.Khong,
             caption: "Theo kết quả AI",
             icon: ShieldCheck,
@@ -59,7 +59,7 @@ export function StatCards({
           },
         ]),
     {
-      label: "Dự đoán lỗi",
+      label: "Bị lỗi",
       value: counts.FAILED,
       caption: "Cần thử lại",
       icon: CircleAlert,

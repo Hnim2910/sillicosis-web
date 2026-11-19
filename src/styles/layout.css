@@ -1,7 +1,7 @@
 /* App shell: a full-width header on top, the sidebar under it on the left.
    Type scale: page title 22px, menu items / card titles 16px, body text 14px. */
 :root {
-  --header-height: 56px;
+  --header-height: 64px;
   --sidebar-width: 240px;
 }
 
@@ -56,18 +56,19 @@
   border: 1px solid #ffffff20;
 }
 
-/* The header is low, so the logo is slightly tighter; the tagline stays. */
+/* Logo in the 64px header; the tagline stays. */
 .app-header .brand-icon {
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
 }
 
 .app-header .brand strong {
-  font-size: 20px;
+  font-size: 23px;
 }
 
 .app-header .brand small {
-  margin-top: 1px;
+  margin-top: 2px;
+  font-size: 10.5px;
   line-height: 1.2;
 }
 
@@ -93,15 +94,19 @@
   right: 0;
   bottom: 0;
   width: 60%;
-  background: linear-gradient(115deg,
-      rgba(8, 127, 119, 0) 0%,
-      rgba(8, 127, 119, 0.22) 40%,
-      rgba(8, 127, 119, 0.7) 60%,
-      #087f77 100%);
+  /* Solid from 66% so the white account text on the right keeps ≥ 4.5:1 contrast. */
+  background: linear-gradient(
+    115deg,
+    rgba(8, 127, 119, 0) 0%,
+    rgba(8, 127, 119, 0.22) 35%,
+    rgba(8, 127, 119, 0.85) 55%,
+    #087f77 66%,
+    #087f77 100%
+  );
   pointer-events: none;
 }
 
-.app-header>* {
+.app-header > * {
   position: relative;
 }
 
@@ -109,6 +114,53 @@
   background: #fff;
   color: #066c62;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+/* Account block on the right of the header (white on solid teal). */
+.header-account {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #fff;
+}
+.header-account__profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 12px;
+}
+.header-account__profile:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+.header-account__text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  max-width: 220px;
+}
+.header-account__text strong {
+  font-size: 14px;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.header-account__text small {
+  font-size: 14px;
+  color: #e6f6f3;
+}
+.header-logout {
+  display: inline-grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+}
+.header-logout:hover {
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .desktop-sidebar {
@@ -142,7 +194,7 @@
   border-radius: 8px;
   color: #3d505e;
   margin-bottom: 4px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
 }
 
@@ -165,7 +217,7 @@
   padding: 16px 4px 0;
 }
 
-.sidebar-user>div {
+.sidebar-user > div {
   min-width: 0;
   flex: 1;
 }
@@ -240,4 +292,113 @@
 
 .skip-link:focus {
   top: 0;
+}
+
+/* Account menu in the header (white on solid teal). */
+.account-menu {
+  position: relative;
+  color: #fff;
+}
+.account-menu__trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 12px;
+  color: #fff;
+  text-align: left;
+}
+.account-menu__trigger:hover,
+.account-menu.is-open .account-menu__trigger {
+  background: rgba(255, 255, 255, 0.14);
+}
+.account-menu__caret {
+  transition: transform 0.15s;
+}
+.account-menu.is-open .account-menu__caret {
+  transform: rotate(180deg);
+}
+.account-menu__list {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 50;
+  min-width: 220px;
+  padding: 6px;
+  border: 1px solid #e1e8eb;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 16px 40px #1226312b;
+}
+.account-menu__item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1c2f3d;
+  text-align: left;
+}
+.account-menu__item:hover {
+  background: #eef6f5;
+}
+.account-menu__item svg {
+  color: #3d505e;
+}
+.account-menu__item.is-danger,
+.account-menu__item.is-danger svg {
+  color: #c62828;
+}
+.account-menu__item.is-danger:hover {
+  background: #fdecec;
+}
+
+/* Reminder card at the bottom of the sidebar. */
+.tieu-su-reminder {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #d3e6e2;
+  border-radius: 14px;
+  background: linear-gradient(160deg, #f1f8f6 0%, #e6f2ef 100%);
+}
+.tieu-su-reminder__icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #fff;
+  color: #066c62;
+  box-shadow: 0 2px 6px #12263112;
+}
+.tieu-su-reminder strong {
+  margin-top: 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1c2f3d;
+}
+.tieu-su-reminder p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #3d505e;
+}
+.tieu-su-reminder__action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #066c62;
+}
+.tieu-su-reminder__action:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

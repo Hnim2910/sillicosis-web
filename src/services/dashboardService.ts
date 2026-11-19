@@ -18,6 +18,6 @@ export const dashboardService = {
         : [1, await predictionService.listMine()];
     const counts: Record<PredictionOutcome, number> = { Co: 0, Khong: 0, FAILED: 0 };
     for (const prediction of predictions) counts[predictionOutcome(prediction)] += 1;
-    return { patients, predictions, counts };
+    return { patients, predictions, counts, loadedAt: Date.now() };
   },
 };

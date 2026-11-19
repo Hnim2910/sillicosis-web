@@ -1,7 +1,10 @@
 export type Role = "patient" | "admin";
 export type Gender = "male" | "female" | "other";
 
-/** An account; a patient account is also the patient record (code, workplace, exposure history…). */
+/** Tiểu sử: clinical form column → value (same codes as the screening form, see TIEU_SU_KEYS). */
+export type TieuSu = Record<string, string | number>;
+
+/** An account; a patient account is also the patient record (code, tiểu sử…). */
 export interface User {
   id: string;
   /** Patient code such as BN-000001; empty for admins. */
@@ -14,10 +17,8 @@ export interface User {
   birthDate: string;
   /** Empty when the account has not set a gender yet. */
   gender: Gender | "";
-  occupation: string;
-  workplace: string;
-  exposureHistory: string;
-  riskFactors: string;
+  /** Empty object when not filled in yet. */
+  tieuSu: TieuSu;
 }
 
 export interface AccountInput {
@@ -27,15 +28,7 @@ export interface AccountInput {
   password: string;
 }
 
-export type ProfileInput = Pick<
-  User,
-  | "name"
-  | "email"
-  | "phone"
-  | "birthDate"
-  | "gender"
-  | "occupation"
-  | "workplace"
-  | "exposureHistory"
-  | "riskFactors"
->;
+/** What PUT /api/users/me takes; `tieuSu` left out keeps the saved one. */
+export type ProfileInput = Pick<User, "name" | "email" | "phone" | "birthDate" | "gender"> & {
+  tieuSu?: TieuSu;
+};

@@ -30,7 +30,7 @@ export function QuickActions({ role }: { role: Role }) {
       : [
           {
             href: "/prediction",
-            title: "Dự đoán mới",
+            title: "Chẩn đoán mới",
             detail: "Gửi thông tin lâm sàng và/hoặc ảnh X-quang",
             icon: ScanLine,
           },

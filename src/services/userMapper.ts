@@ -1,4 +1,4 @@
-import type { Gender, ProfileInput, Role, User } from "@/types/user";
+import type { Gender, ProfileInput, Role, TieuSu, User } from "@/types/user";
 
 // The only place that knows the backend's user shape (silicosis-backend/docs/api-auth.md).
 
@@ -15,10 +15,7 @@ export interface ApiUser {
   enabled: boolean;
   birthDate: string | null;
   gender: ApiGender | null;
-  occupation: string | null;
-  workplace: string | null;
-  exposureHistory: string | null;
-  riskFactors: string | null;
+  tieuSu: TieuSu | null;
 }
 
 export interface ApiProfile {
@@ -27,10 +24,8 @@ export interface ApiProfile {
   phone: string | null;
   birthDate: string | null;
   gender: ApiGender | null;
-  occupation: string | null;
-  workplace: string | null;
-  exposureHistory: string | null;
-  riskFactors: string | null;
+  /** null keeps the saved tiểu sử. */
+  tieuSu: TieuSu | null;
 }
 
 const ROLE_FROM_API: Record<ApiRole, Role> = { USER: "patient", ADMIN: "admin" };
@@ -46,14 +41,11 @@ export function toUser(user: ApiUser): User {
     active: user.enabled,
     birthDate: user.birthDate || "",
     gender: (user.gender?.toLowerCase() as Gender | undefined) || "",
-    occupation: user.occupation || "",
-    workplace: user.workplace || "",
-    exposureHistory: user.exposureHistory || "",
-    riskFactors: user.riskFactors || "",
+    tieuSu: user.tieuSu ?? {},
   };
 }
 
-/** PUT /api/users/me overwrites every field, so the whole profile is always sent. */
+/** PUT /api/users/me overwrites every account field, so they are always all sent; tiểu sử only when given. */
 export function toApiProfile(input: ProfileInput): ApiProfile {
   const blank = (value: string) => value.trim() || null;
   return {
@@ -62,9 +54,6 @@ export function toApiProfile(input: ProfileInput): ApiProfile {
     phone: blank(input.phone),
     birthDate: blank(input.birthDate),
     gender: input.gender ? (input.gender.toUpperCase() as ApiGender) : null,
-    occupation: blank(input.occupation),
-    workplace: blank(input.workplace),
-    exposureHistory: blank(input.exposureHistory),
-    riskFactors: blank(input.riskFactors),
+    tieuSu: input.tieuSu ?? null,
   };
 }

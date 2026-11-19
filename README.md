@@ -23,9 +23,9 @@ Phạm vi kiểm thử nghiệp vụ và các trường hợp hồi quy: [docs/t
 
 ## Kết nối backend
 
-Toàn bộ dữ liệu (tài khoản, hồ sơ bệnh nhân, ảnh, lượt khám, kết quả dự đoán) đều đọc/ghi qua backend `silicosis-backend` (hợp đồng API trong `silicosis-backend/docs/`). Trình duyệt không lưu dữ liệu y tế; báo cáo PDF và số liệu tổng quan được tạo ở trình duyệt từ dữ liệu thật trả về.
+Toàn bộ dữ liệu (tài khoản, hồ sơ bệnh nhân, ảnh, lượt khám, kết quả chẩn đoán) đều đọc/ghi qua backend `silicosis-backend` (hợp đồng API trong `silicosis-backend/docs/`). Trình duyệt không lưu dữ liệu y tế; báo cáo PDF và số liệu tổng quan được tạo ở trình duyệt từ dữ liệu thật trả về.
 
-1. Chạy backend theo hướng dẫn của repo backend (`docker compose up -d` rồi `./mvnw clean spring-boot:run`) và dịch vụ dự đoán FastAPI mà backend gọi tới. Thiếu dịch vụ dự đoán thì lượt khám vẫn lưu được nhưng kết quả báo lỗi và có nút thử lại.
+1. Chạy backend theo hướng dẫn của repo backend (`docker compose up -d` rồi `./mvnw clean spring-boot:run`) và dịch vụ chẩn đoán FastAPI mà backend gọi tới. Thiếu dịch vụ chẩn đoán thì lượt khám vẫn lưu được nhưng kết quả báo lỗi và có nút thử lại.
 2. Tạo `.env.local` từ `.env.example`, đặt `NEXT_PUBLIC_API_URL` trỏ tới backend (mặc định `http://localhost:8080`). Biến này được gắn vào bundle lúc build: đổi giá trị thì khởi động lại `npm run dev` hoặc build lại.
 3. Nếu web chạy ở origin khác `http://localhost:3000`, thêm origin đó vào biến môi trường `APP_CORS_ALLOWED_ORIGIN_PATTERNS` của backend (thuộc tính `app.cors.allowed-origin-patterns`, các giá trị cách nhau bởi dấu phẩy).
 
@@ -71,8 +71,8 @@ Phân tích MediScan, danh sách màn hình, actor, quyết định kiến trúc
 
 ## Luồng sử dụng
 
-1. Bệnh nhân đăng nhập → **Dự đoán** → chọn ảnh X-quang ngực (PNG/JPEG ≤ 10 MB, cạnh ngắn ≥ 256 px), nhập ngày khám và các chỉ số (không bắt buộc) → **Lưu lượt khám & dự đoán**.
-2. Trang kết quả hiển thị nhãn, xác suất so với ngưỡng, mô hình/phiên bản, ảnh (phóng to được) và các chỉ số đã nhập. Dự đoán lỗi thì có nút **Thử lại**. Kết quả thành công xuất được báo cáo PDF.
+1. Bệnh nhân đăng nhập → **Chẩn đoán** → chọn ảnh X-quang ngực (PNG/JPEG ≤ 10 MB, cạnh ngắn ≥ 256 px), nhập ngày khám và các chỉ số (không bắt buộc) → **Lưu lượt khám & chẩn đoán**.
+2. Trang kết quả hiển thị nhãn, xác suất so với ngưỡng, mô hình/phiên bản, ảnh (phóng to được) và các chỉ số đã nhập. Chẩn đoán lỗi thì có nút **Thử lại**. Kết quả thành công xuất được báo cáo PDF.
 3. **Lịch sử** liệt kê các lượt khám, lọc theo kết quả và ngày khám. **Hồ sơ cá nhân** cho cập nhật thông tin tài khoản và hồ sơ bệnh nhân.
 4. Admin: tạo/khoá/mở khoá/xoá tài khoản bệnh nhân, xem và sửa hồ sơ bệnh nhân, tra cứu và xoá lượt khám của mọi bệnh nhân.
 

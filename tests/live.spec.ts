@@ -21,6 +21,12 @@ test.beforeAll(async () => {
   test.skip(!(await apiReachable()), `Backend không chạy ở ${API_URL}`);
 });
 
+/** The system dropdown is not a native <select>: open it, then click the option. */
+async function choose(page: Page, label: string, option: string) {
+  await page.getByLabel(label, { exact: true }).click();
+  await page.getByRole("option", { name: option, exact: true }).click();
+}
+
 async function login(page: Page, account: { id?: string; password?: string }) {
   await page.goto("/login");
   await page.getByLabel("Email hoặc số điện thoại").fill(account.id!);
@@ -87,6 +93,7 @@ test.describe("patient", () => {
         sent.push(request.url());
     });
     await page.goto("/prediction");
+    await page.getByRole("button", { name: /Ảnh X-quang/ }).click();
     const small = await syntheticPng(page, 128);
     await page
       .getByLabel("Chọn ảnh X-quang")
@@ -101,41 +108,52 @@ test.describe("patient", () => {
     await expect(page).toHaveURL(/\/dashboard$/);
     await page.goto("/prediction");
     await expect(page.getByLabel("Thời điểm ho")).toHaveCount(0);
-    await page.getByLabel("Ho", { exact: true }).selectOption({ label: "Có" });
-    await page.getByLabel("Thời điểm ho").selectOption({ label: "Ban đêm" });
-    await page.getByLabel("FVC % so với lý thuyết (%)").fill("72,5");
+    await choose(page, "Ho", "Có");
+    await choose(page, "Thời điểm ho", "Ban đêm");
+    // Letters are dropped while typing in a number field.
+    await page.getByLabel("FVC % so với lý thuyết (%)", { exact: true }).fill("72,5abc");
+    await expect(page.getByLabel("FVC % so với lý thuyết (%)", { exact: true })).toHaveValue(
+      "72,5",
+    );
+    await page.getByRole("button", { name: /^Tiếp tục/ }).click();
+    await page.getByRole("button", { name: /^Tiếp tục/ }).click();
+    await expect(page.getByText("Ban đêm")).toBeVisible();
     await page.getByRole("button", { name: "Chẩn đoán", exact: true }).click();
+    const onlyThisTime = page.getByRole("button", { name: "Chỉ dùng cho lần này" });
+    if (await onlyThisTime.isVisible().catch(() => false)) await onlyThisTime.click();
     await expect(page).toHaveURL(/\/prediction\/[0-9a-f-]{36}$/, { timeout: 60_000 });
     const id = page.url().split("/").pop()!;
-    await expect(
-      page.getByText(/Khả năng có bất thường trên phim phổi|Nguy cơ (thấp|trung bình|cao)|Thử lại/).first(),
-    ).toBeVisible();
+    await expect(page.getByText(/Có nguy cơ|Nguy cơ thấp|Thử lại/).first()).toBeVisible();
     await expect(page.getByText("Ban đêm")).toBeVisible();
     await expect(page.getByText(/dương tính|âm tính/i)).toHaveCount(0);
     await removePrediction(id);
   });
 
-  test("sends an X-ray with clinical data, shows the result and lists it in history", async ({ page }) => {
+  test("sends an X-ray with clinical data, shows the result and lists it in history", async ({
+    page,
+  }) => {
     test.skip(process.env.E2E_WRITE !== "1", "Chỉ chạy khi E2E_WRITE=1 (ghi dữ liệu thật)");
     await login(page, PATIENT);
     await expect(page).toHaveURL(/\/dashboard$/);
     await page.goto("/prediction");
+    await page.getByLabel("Chiều cao (cm)", { exact: true }).fill("165");
+    await page.getByRole("button", { name: /^Tiếp tục/ }).click();
     const image = await syntheticPng(page, 512);
     await page
       .getByLabel("Chọn ảnh X-quang")
       .setInputFiles({ name: "e2e-synthetic.png", mimeType: "image/png", buffer: image });
-    await page.getByLabel("Chiều cao (cm)").fill("165");
-    const submit = page.getByRole("button", { name: "Chẩn đoán", exact: true });
+    const next = page.getByRole("button", { name: /^Tiếp tục/ });
     // An image is only sent after confirming it is a frontal chest X-ray.
-    await expect(submit).toBeDisabled();
-    await page.getByLabel("Đây là phim X-quang ngực thẳng").check();
-    await submit.click();
+    await expect(next).toBeDisabled();
+    await page.getByLabel(/Tôi xác nhận đây là phim X-quang ngực thẳng/).check();
+    await next.click();
+    await page.getByRole("button", { name: "Chẩn đoán", exact: true }).click();
+    const onlyThisTime = page.getByRole("button", { name: "Chỉ dùng cho lần này" });
+    if (await onlyThisTime.isVisible().catch(() => false)) await onlyThisTime.click();
     await expect(page).toHaveURL(/\/prediction\/[0-9a-f-]{36}$/, { timeout: 60_000 });
     const id = page.url().split("/").pop()!;
-    // Either a result or a prediction failure with retry; both are valid backend outcomes.
-    await expect(
-      page.getByText(/Khả năng có bất thường trên phim phổi|Nguy cơ (thấp|trung bình|cao)|Thử lại/).first(),
-    ).toBeVisible();
+    // Either a result or a screening failure with retry; both are valid backend outcomes.
+    await expect(page.getByText(/Có nguy cơ|Nguy cơ thấp|Thử lại/).first()).toBeVisible();
     await expect(page.getByText("165 cm")).toBeVisible();
     await page.goto("/history");
     await expect(page.locator(`a[href="/history/${id}"]`)).toBeVisible();

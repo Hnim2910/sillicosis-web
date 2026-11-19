@@ -173,3 +173,279 @@
   color: #56646f;
   cursor: not-allowed;
 }
+
+/* ---------- Auth v2: one fixed screen, no page scroll ---------- */
+.auth-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.auth-story {
+  padding: 32px 52px 28px;
+  min-height: 0;
+}
+.auth-story-content {
+  margin: auto 0;
+  padding: 0;
+  max-width: 520px;
+}
+.auth-visual {
+  width: 150px;
+  height: 150px;
+  max-width: none;
+  margin: 0 0 28px;
+}
+.auth-visual-ring {
+  width: 132px;
+  height: 132px;
+  box-shadow:
+    0 0 0 14px #94cebf08,
+    0 0 0 30px #94cebf05;
+}
+.auth-story h1 {
+  margin-top: 0;
+  font-size: clamp(28px, 2.7vw, 40px);
+  line-height: 1.22;
+  letter-spacing: -1px;
+  font-weight: 650;
+}
+.auth-story-content > p {
+  margin-top: 16px;
+  max-width: 460px;
+  font-size: 16px;
+  line-height: 1.65;
+  color: #d9efe9;
+}
+.auth-slogan {
+  margin-top: 24px;
+  font-size: 14px;
+  font-style: italic;
+  letter-spacing: 0.4px;
+  color: #cfe9e2;
+}
+.auth-form-panel {
+  min-height: 0;
+  padding: 24px 40px;
+  overflow: hidden;
+}
+.auth-form {
+  max-width: 400px;
+  margin: 0;
+}
+.auth-form .eyebrow {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.auth-form h2 {
+  font-size: 24px;
+}
+.auth-description {
+  margin: 6px 0 20px;
+}
+.auth-switch {
+  margin: 16px 0 0;
+}
+.auth-form .stack {
+  gap: 14px;
+}
+.auth-form .field label {
+  margin-bottom: 6px;
+}
+.auth-form .field input {
+  height: 42px;
+}
+
+/* Sign-up: tighter fields so the whole form fits. */
+.auth-compact.stack {
+  gap: 10px;
+}
+.auth-compact .field label {
+  margin-bottom: 4px;
+}
+.auth-compact .field input {
+  height: 38px;
+}
+.auth-compact .field-error {
+  margin-top: 3px;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+/* Password input with the eye button inside it. */
+.auth-password__box {
+  position: relative;
+}
+.auth-password__box input {
+  width: 100%;
+  padding-right: 44px;
+}
+.auth-password__box button {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: #56646f;
+}
+.auth-password__box button:hover {
+  background: #eef6f5;
+}
+
+/* OTP: six boxes like on a phone. */
+.otp-boxes {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+.otp-box {
+  width: 100%;
+  height: 54px;
+  border: 1.5px solid #cdd8de;
+  border-radius: 10px;
+  background: #fff;
+  text-align: center;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--foreground);
+  caret-color: var(--primary);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+.otp-box:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px #087f7724;
+}
+.otp-box:not(:placeholder-shown),
+.otp-box[value]:not([value=""]) {
+  border-color: #8fbfb8;
+}
+.otp-box[aria-invalid="true"] {
+  border-color: #c23b3b;
+}
+
+@media (max-width: 960px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+  .auth-form-panel {
+    overflow: visible;
+  }
+}
+
+/* Sign-up keeps a margin even with every error message shown. */
+.auth-form:has(.auth-compact) .eyebrow {
+  margin-bottom: 2px;
+}
+.auth-form:has(.auth-compact) h2 {
+  font-size: 22px;
+}
+.auth-form:has(.auth-compact) .auth-description {
+  margin: 4px 0 14px;
+}
+.auth-compact.stack {
+  gap: 8px;
+}
+.auth-compact .field input {
+  height: 36px;
+}
+.auth-compact .btn {
+  margin-top: 16px;
+}
+.auth-form:has(.auth-compact) .auth-switch {
+  margin-top: 12px;
+}
+
+/* The base .field (gap 7px, inputs min-height 41px) would undo the compact sizes: override them explicitly. */
+.auth-form .field label {
+  margin-bottom: 0;
+}
+.auth-compact .field {
+  gap: 4px;
+}
+.auth-compact .field input {
+  min-height: 36px;
+  height: 36px;
+  padding: 6px 12px;
+}
+.auth-compact .auth-password__box input {
+  padding-right: 44px;
+}
+
+/* Scan illustration below the description, larger; it shrinks on short windows so the page never scrolls. */
+.auth-visual {
+  --visual: clamp(150px, 30dvh, 230px);
+  width: var(--visual);
+  height: var(--visual);
+  margin: clamp(18px, 4dvh, 36px) 0 0;
+}
+.auth-visual-ring {
+  width: calc(var(--visual) * 0.86);
+  height: calc(var(--visual) * 0.86);
+  box-shadow:
+    0 0 0 calc(var(--visual) * 0.1) #94cebf08,
+    0 0 0 calc(var(--visual) * 0.2) #94cebf05;
+}
+
+/* Left column: text at the top, the scan illustration centred between the description and the slogan. */
+.auth-story-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding-top: clamp(20px, 7dvh, 64px);
+  max-width: 520px;
+}
+.auth-visual {
+  --visual: clamp(140px, 28dvh, 230px);
+  flex-shrink: 0;
+  margin: auto 0;
+}
+
+/* No extra margin above the slogan, so the illustration is exactly centred between the description and the slogan. */
+.auth-slogan {
+  margin-top: 0;
+}
+
+/* Final left column. The two titles keep the position they had when the group (titles + illustration) was centred
+   between the logo and the slogan; the illustration is then centred in the space left between the description
+   and the slogan.
+   How: a flexible spacer above the titles and the illustration area below them. The area's flex-basis is the
+   illustration + its old gap + the old slogan margin, so with the free space shared equally the spacer ends up at
+   (free - basis) / 2 - exactly the old offset - while the area gets the rest and centres the illustration. */
+.auth-story-content {
+  --story-visual: clamp(150px, 30dvh, 230px);
+  --story-gap: clamp(18px, 4dvh, 36px);
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  max-width: 520px;
+}
+.auth-story-content::before {
+  content: "";
+  flex: 1 1 0;
+  min-height: 0;
+}
+.auth-visual-area {
+  flex: 1 1 calc(var(--story-visual) + var(--story-gap) + 24px);
+  min-height: 0;
+  display: flex;
+  align-items: center;
+}
+.auth-visual {
+  --visual: var(--story-visual);
+  margin: 0;
+}

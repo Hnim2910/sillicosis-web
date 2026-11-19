@@ -54,7 +54,7 @@ export function XrayUpload({
           <div className="image-preview">
             <Image
               src={value.url}
-              alt="Ảnh đã chọn để dự đoán"
+              alt="Ảnh đã chọn để chẩn đoán"
               width={value.width}
               height={value.height}
               unoptimized
@@ -119,9 +119,6 @@ export function XrayUpload({
           </Button>
         </div>
       )}
-      <p className="notice">
-        Hệ thống không tự nhận biết loại ảnh: hãy chọn đúng phim X-quang ngực thẳng.
-      </p>
     </div>
   );
 }

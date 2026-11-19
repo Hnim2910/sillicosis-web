@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Modal } from "@/components/common/Modal";
+import { ToastProvider } from "@/components/common/Toast";
 import { Loading } from "@/components/common/Loading";
 import { ErrorState } from "@/components/common/Feedback";
 import { useAuth } from "@/contexts/AuthContext";
@@ -23,32 +24,34 @@ export function MainLayout({ children }: { children: ReactNode }) {
   if (error) return <ErrorState message={error} retry={refresh} />;
   if (loading || !user) return <Loading />;
   return (
-    <div className="app-shell">
-      <a className="skip-link" href="#main-content">
-        Chuyển tới nội dung
-      </a>
-      <Header onMenu={() => setMenuOpen(true)} />
-      <aside className="desktop-sidebar">
-        <Sidebar />
-      </aside>
-      <div className="workspace">
-        <main id="main-content" className="main-content">
-          {canAccessRoute(pathname, user.role) ? (
-            <Fragment key={`${user.id}:${user.role}`}>{children}</Fragment>
-          ) : (
-            <div className="empty-state">
-              <h1>Bạn không có quyền truy cập</h1>
-              <p>Màn hình này không dành cho vai trò của bạn.</p>
-              <Link href="/dashboard" className="btn btn-primary">
-                Về tổng quan
-              </Link>
-            </div>
-          )}
-        </main>
+    <ToastProvider>
+      <div className="app-shell">
+        <a className="skip-link" href="#main-content">
+          Chuyển tới nội dung
+        </a>
+        <Header onMenu={() => setMenuOpen(true)} />
+        <aside className="desktop-sidebar">
+          <Sidebar />
+        </aside>
+        <div className="workspace">
+          <main id="main-content" className="main-content">
+            {canAccessRoute(pathname, user.role) ? (
+              <Fragment key={`${user.id}:${user.role}`}>{children}</Fragment>
+            ) : (
+              <div className="empty-state">
+                <h1>Bạn không có quyền truy cập</h1>
+                <p>Màn hình này không dành cho vai trò của bạn.</p>
+                <Link href="/dashboard" className="btn btn-primary">
+                  Về tổng quan
+                </Link>
+              </div>
+            )}
+          </main>
+        </div>
+        <Modal open={menuOpen} title="Điều hướng" onClose={() => setMenuOpen(false)}>
+          <Sidebar onNavigate={() => setMenuOpen(false)} />
+        </Modal>
       </div>
-      <Modal open={menuOpen} title="Điều hướng" onClose={() => setMenuOpen(false)}>
-        <Sidebar onNavigate={() => setMenuOpen(false)} />
-      </Modal>
-    </div>
+    </ToastProvider>
   );
 }

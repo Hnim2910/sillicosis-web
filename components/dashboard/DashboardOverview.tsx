@@ -1,10 +1,15 @@
 "use client";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, ScanLine, UserRoundPen } from "lucide-react";
+import { Button } from "@/components/common/Button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAsync } from "@/hooks/useAsync";
 import { dashboardService } from "@/services/dashboardService";
+import { predictionOutcome } from "@/services/predictionService";
+import type { Prediction, PredictionOutcome } from "@/types/prediction";
+import type { User } from "@/types/user";
+import { needsProfileSetup } from "@/utils/tieuSu";
 import { PageHeader } from "@/components/common/PageHeader";
 import { Card, CardHeader } from "@/components/common/Card";
 import { Loading } from "@/components/common/Loading";
@@ -13,26 +18,83 @@ import { HistoryTable } from "@/components/prediction/PredictionHistory/HistoryT
 import { StatCards } from "./StatCards";
 import { ResultDistribution } from "./ResultDistribution";
 import { QuickActions } from "./QuickActions";
+import { PatientKpis } from "./PatientKpis";
+import { LatestResultCard } from "./LatestResultCard";
+import { RecentPredictions } from "./RecentPredictions";
+import { ResultGuide } from "./ResultGuide";
+import { ProfileSetupDialog, setupPostponed } from "./ProfileSetupDialog";
 
-export function DashboardOverview() {
-  const { user } = useAuth();
-  const role = user?.role || "patient";
-  const loader = useCallback(() => dashboardService.getOverview(role), [role]);
-  const { data, loading, error, reload } = useAsync(loader);
+function countOutcomes(predictions: Prediction[]) {
+  const counts: Record<PredictionOutcome, number> = { Co: 0, Khong: 0, FAILED: 0 };
+  for (const prediction of predictions) counts[predictionOutcome(prediction)] += 1;
+  return counts;
+}
+
+function PatientOverview({ user }: { user: User }) {
+  const loader = useCallback(() => dashboardService.getOverview("patient"), []);
+  const { data, loading, error, reload, setData } = useAsync(loader);
+  const [setupOpen, setSetupOpen] = useState(
+    () => needsProfileSetup(user) && !setupPostponed(user.id),
+  );
+  const incomplete = needsProfileSetup(user);
+
+  const replace = (updated: Prediction) =>
+    data &&
+    setData({
+      ...data,
+      predictions: data.predictions.map((item) => (item.id === updated.id ? updated : item)),
+    });
+
   return (
     <>
       <PageHeader
         title="Tổng quan"
-        description={`Chào ${user?.name || "bạn"}.`}
+        description={`Chào ${user.name}, cùng theo dõi sức khỏe phổi hôm nay.`}
         action={
-          role === "patient" && (
+          <>
+            {incomplete && (
+              <Button variant="secondary" onClick={() => setSetupOpen(true)}>
+                <UserRoundPen size={16} />
+                Hoàn thiện tiểu sử
+              </Button>
+            )}
             <Link href="/prediction" className="btn btn-primary">
-              <Plus size={16} />
-              Dự đoán mới
+              <ScanLine size={16} />
+              Chẩn đoán mới
             </Link>
-          )
+          </>
         }
       />
+
+      {loading ? (
+        <Loading />
+      ) : error || !data ? (
+        <ErrorState message={error || "Chưa thể tải tổng quan."} retry={reload} />
+      ) : (
+        <div className="stack overview">
+          <div className="overview-main">
+            <PatientKpis predictions={data.predictions} now={data.loadedAt} />
+            <LatestResultCard prediction={data.predictions[0] ?? null} onChange={replace} />
+          </div>
+          <div className="overview-row">
+            <ResultDistribution counts={countOutcomes(data.predictions)} />
+            <RecentPredictions predictions={data.predictions} />
+          </div>
+          <ResultGuide />
+        </div>
+      )}
+      <ProfileSetupDialog user={user} open={setupOpen} onClose={() => setSetupOpen(false)} />
+    </>
+  );
+}
+
+/** Admin dashboard: unchanged layout for now (admin pages are out of scope of this redesign). */
+function AdminOverview() {
+  const loader = useCallback(() => dashboardService.getOverview("admin"), []);
+  const { data, loading, error, reload } = useAsync(loader);
+  return (
+    <>
+      <PageHeader title="Tổng quan" description="Hoạt động sàng lọc của mọi bệnh nhân." />
       {loading ? (
         <Loading />
       ) : error || !data ? (
@@ -40,14 +102,14 @@ export function DashboardOverview() {
       ) : (
         <>
           <StatCards
-            role={role}
+            role="admin"
             patients={data.patients}
             visits={data.predictions.length}
             counts={data.counts}
           />
           <div className="dashboard-grid">
-            <ResultDistribution normal={data.counts.Khong} silicosis={data.counts.Co} />
-            <QuickActions role={role} />
+            <ResultDistribution counts={data.counts} />
+            <QuickActions role="admin" />
           </div>
           <Card>
             <CardHeader
@@ -60,16 +122,19 @@ export function DashboardOverview() {
               }
             />
             {data.predictions.length ? (
-              <HistoryTable records={data.predictions.slice(0, 5)} showPatient={role === "admin"} />
+              <HistoryTable records={data.predictions.slice(0, 5)} showPatient />
             ) : (
-              <EmptyState
-                title="Chưa có lượt chẩn đoán nào"
-                description="Kết quả sẽ hiện ở đây sau lần dự đoán đầu tiên."
-              />
+              <EmptyState title="Chưa có lượt chẩn đoán nào" />
             )}
           </Card>
         </>
       )}
     </>
   );
+}
+
+export function DashboardOverview() {
+  const { user } = useAuth();
+  if (!user) return <Loading />;
+  return user.role === "admin" ? <AdminOverview /> : <PatientOverview key={user.id} user={user} />;
 }

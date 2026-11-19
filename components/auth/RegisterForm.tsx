@@ -3,12 +3,13 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/common/Input";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Button } from "@/components/common/Button";
 import { Alert } from "@/components/common/Feedback";
 import { authService } from "@/services/authService";
 import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage } from "@/utils/format";
-import { PASSWORD_RULE, validEmail, validPassword, validVnMobile } from "@/utils/validation";
+import { validEmail, validPassword, validVnMobile } from "@/utils/validation";
 
 export function RegisterForm() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", password: "", confirm: "" });
@@ -28,9 +29,11 @@ export function RegisterForm() {
     <div className="auth-form">
       <p className="eyebrow">BẮT ĐẦU HÀNH TRÌNH</p>
       <h2>Tạo tài khoản</h2>
-      <p className="auth-description">Theo dõi hồ sơ và kết quả sàng lọc của chính bạn.</p>
+      <p className="auth-description">
+        Tạo tài khoản bệnh nhân để lưu và theo dõi kết quả chẩn đoán.
+      </p>
       <form
-        className="stack"
+        className="stack auth-compact"
         onSubmit={async (event) => {
           event.preventDefault();
           setBusy(true);
@@ -49,6 +52,7 @@ export function RegisterForm() {
         {error && <Alert>{error}</Alert>}
         <Input
           label="Họ và tên"
+          placeholder="VD: Nguyễn Văn A"
           value={form.name}
           onChange={change("name")}
           required
@@ -58,6 +62,7 @@ export function RegisterForm() {
         <Input
           label="Email"
           type="email"
+          placeholder="VD: ten@example.com"
           value={form.email}
           onChange={change("email")}
           required
@@ -67,26 +72,33 @@ export function RegisterForm() {
         <Input
           label="Số điện thoại (không bắt buộc)"
           type="tel"
+          inputMode="numeric"
+          maxLength={10}
+          placeholder="VD: 0912345678"
           value={form.phone}
-          onChange={change("phone")}
+          onChange={(event) =>
+            setForm({ ...form, phone: event.target.value.replace(/\D/g, "").slice(0, 10) })
+          }
           autoComplete="tel"
-          error={!validVnMobile(form.phone) ? "Số di động Việt Nam không hợp lệ." : undefined}
+          error={
+            !validVnMobile(form.phone) ? "Số di động Việt Nam không hợp lệ (10 chữ số)." : undefined
+          }
         />
-        <Input
+        <PasswordInput
           label="Mật khẩu"
-          type="password"
           value={form.password}
           onChange={change("password")}
           maxLength={72}
           required
           autoComplete="new-password"
           error={
-            form.password && !validPassword(form.password) ? `Cần ${PASSWORD_RULE}` : undefined
+            form.password && !validPassword(form.password)
+              ? "Cần 8–72 ký tự gồm chữ hoa, chữ thường, số và ký tự đặc biệt."
+              : undefined
           }
         />
-        <Input
+        <PasswordInput
           label="Xác nhận mật khẩu"
-          type="password"
           value={form.confirm}
           onChange={change("confirm")}
           required

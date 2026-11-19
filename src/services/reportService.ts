@@ -1,13 +1,19 @@
 import type { Prediction } from "@/types/prediction";
-import { CHANCE_LABEL, CLINICAL_RISK_TEXT, MODEL_LIMITATIONS, RESULT_NOTICE } from "@/constants/app";
+import {
+  CHANCE_LABEL,
+  MODEL_LIMITATIONS,
+  NO_IMAGE_NOTE,
+  OUTCOME_LABELS,
+  RESULT_NOTICE,
+} from "@/constants/app";
+import { predictionOutcome } from "@/services/predictionService";
 import { formatDate } from "@/utils/format";
 import {
-  clinicalRiskLevel,
   clinicalRows,
   formatChance,
   formatPercent,
   mainChance,
-  recommendationText,
+  resultInsight,
 } from "@/utils/predictionDisplay";
 import { loadImage } from "@/services/imageService";
 import { wrapText } from "@/utils/wrapText";
@@ -61,18 +67,25 @@ export const reportService = {
     line("SILICOCARE", 23, true);
     y += 15;
     line("BÁO CÁO SÀNG LỌC BỤI PHỔI SILIC (THỬ NGHIỆM)", 34, true);
-    line("KẾT QUẢ CỦA MÔ HÌNH AI · KHÔNG PHẢI KẾT QUẢ CHẨN ĐOÁN", 20);
+    line("KẾT QUẢ SÀNG LỌC CỦA MÔ HÌNH AI · KHÔNG THAY THẾ CHẨN ĐOÁN CỦA BÁC SĨ", 20);
     y += 20;
     if (prediction.user)
-      line(`Bệnh nhân: ${prediction.user.fullName}${prediction.user.code ? ` · ${prediction.user.code}` : ""}`);
+      line(
+        `Bệnh nhân: ${prediction.user.fullName}${prediction.user.code ? ` · ${prediction.user.code}` : ""}`,
+      );
     line(`Ngày khám: ${formatDate(prediction.examDate)}`);
     const chance = mainChance(prediction);
-    const level = clinicalRiskLevel(prediction);
-    if (chance !== null) line(`${CHANCE_LABEL}: ${formatChance(chance)}`, 28, true);
-    if (level) line(CLINICAL_RISK_TEXT[level].label, 28, true);
-    line(recommendationText(prediction), 24, true);
+    line(`Kết quả: ${OUTCOME_LABELS[predictionOutcome(prediction)]}`, 28, true);
+    if (chance !== null) line(`${CHANCE_LABEL}: ${formatChance(chance)}`, 24, true);
+    else line(NO_IMAGE_NOTE, 21);
+    const insight = resultInsight(prediction);
+    if (insight) {
+      line(`Nhận xét: ${insight.comment}`, 21);
+      line("Lời khuyên:", 21, true);
+      for (const advice of insight.advice) line(`• ${advice}`, 21);
+    }
     line(
-      `Mô hình: ${prediction.modelName || "Không rõ"} · Phiên bản ${prediction.modelVersion} · Dự đoán lúc ${formatDate(prediction.createdAt, true)}`,
+      `Mô hình: ${prediction.modelName || "Không rõ"} · Phiên bản ${prediction.modelVersion} · Chẩn đoán lúc ${formatDate(prediction.createdAt, true)}`,
       20,
     );
     y += 15;
@@ -88,7 +101,6 @@ export const reportService = {
       ctx.drawImage(image, 72, y, width, height);
       y += height + 35;
     } else {
-      line("Không có ảnh X-quang; kết luận chỉ dựa trên thông tin lâm sàng.", 21);
       y += 15;
     }
     const rows = clinicalRows(prediction);

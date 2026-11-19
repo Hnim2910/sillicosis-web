@@ -161,3 +161,9 @@
     scroll-behavior: auto !important;
   }
 }
+
+@media (max-width: 760px) {
+  .header-account__text {
+    display: none;
+  }
+}

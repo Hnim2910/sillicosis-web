@@ -8,12 +8,22 @@ export function Modal({
   open,
   onClose,
   title,
+  description,
   children,
+  footer,
+  wide = false,
+  drawer = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
+  description?: string;
   children: ReactNode;
+  /** Action buttons, kept visible at the bottom while the body scrolls. */
+  footer?: ReactNode;
+  wide?: boolean;
+  /** Full-height panel against the right edge instead of a centred box. */
+  drawer?: boolean;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
@@ -36,7 +46,7 @@ export function Modal({
   return (
     <dialog
       ref={dialog}
-      className="modal"
+      className={drawer ? "modal modal-drawer" : wide ? "modal modal-wide" : "modal"}
       aria-labelledby={titleId}
       onCancel={(event) => {
         event.preventDefault();
@@ -47,12 +57,16 @@ export function Modal({
       }}
     >
       <div className="modal-header">
-        <h2 id={titleId}>{title}</h2>
+        <div>
+          <h2 id={titleId}>{title}</h2>
+          {description && <p className="modal-description">{description}</p>}
+        </div>
         <Button variant="ghost" aria-label="Đóng hộp thoại" onClick={onClose}>
           <X size={20} />
         </Button>
       </div>
       {open && <div className="modal-body">{children}</div>}
+      {open && footer && <div className="modal-footer">{footer}</div>}
     </dialog>
   );
 }

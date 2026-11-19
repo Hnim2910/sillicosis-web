@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useState } from "react";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { ScanLine } from "lucide-react";
 import type { Prediction } from "@/types/prediction";
 import { predictionOutcome, predictionService } from "@/services/predictionService";
 import { useAsync } from "@/hooks/useAsync";
@@ -9,18 +9,24 @@ import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage, formatDate, searchText } from "@/utils/format";
 import { Card } from "@/components/common/Card";
 import { PageHeader } from "@/components/common/PageHeader";
-import { HistoryFilters } from "./HistoryFilters";
 import { Button } from "@/components/common/Button";
 import { Loading } from "@/components/common/Loading";
 import { Alert, EmptyState, ErrorState } from "@/components/common/Feedback";
 import { Modal } from "@/components/common/Modal";
-import { HistoryTable } from "./HistoryTable";
+import { Pagination } from "@/components/common/Pagination";
+import { useToast } from "@/components/common/Toast";
+import { HistoryFilters } from "./HistoryFilters";
+import { HistoryTable, NoMatchSkeleton } from "./HistoryTable";
 
-const PAGE_SIZE = 8;
+const PAGE_SIZE = 10;
 
-/** Patient: own screenings. Admin: every screening; with `manage` they can also be deleted. */
+/**
+ * Patient: own screenings. Admin: every screening; with `manage` they can also be deleted. The page itself never
+ * scrolls: only the table body does, between its fixed header and the pagination footer.
+ */
 export function PredictionHistory({ manage = false }: { manage?: boolean }) {
   const { user } = useAuth();
+  const toast = useToast();
   const admin = user?.role === "admin";
   const loader = useCallback(
     () => (admin ? predictionService.listAll() : predictionService.listMine()),
@@ -34,7 +40,6 @@ export function PredictionHistory({ manage = false }: { manage?: boolean }) {
   const [page, setPage] = useState(1);
   const [remove, setRemove] = useState<Prediction | null>(null);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState("");
   const [mutationError, setMutationError] = useState("");
   const dateError = !!from && !!to && from > to;
   const records = (data || []).filter(
@@ -55,85 +60,80 @@ export function PredictionHistory({ manage = false }: { manage?: boolean }) {
       set(value);
       setPage(1);
     };
+  const shown = dateError
+    ? []
+    : records.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
   return (
-    <>
+    <div className="table-page">
       <PageHeader
-        title={manage ? "Quản lý bản ghi" : "Lịch sử dự đoán"}
+        title={manage ? "Quản lý bản ghi" : "Lịch sử chẩn đoán"}
         action={
           !admin && (
             <Link href="/prediction" className="btn btn-primary">
-              <Plus size={16} />
-              Dự đoán mới
+              <ScanLine size={16} />
+              Chẩn đoán mới
             </Link>
           )
         }
       />
-      {message && (
-        <div className="mb-4">
-          <Alert tone="success">{message}</Alert>
-        </div>
-      )}
-      <Card>
-        <HistoryFilters
-          showSearch={admin}
-          query={query}
-          label={label}
-          from={from}
-          to={to}
-          onQuery={resetPage(setQuery)}
-          onLabel={resetPage(setLabel)}
-          onFrom={resetPage(setFrom)}
-          onTo={resetPage(setTo)}
-        />
-        {dateError && (
-          <div className="px-6 pb-4">
-            <Alert>Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.</Alert>
-          </div>
-        )}
+      <HistoryFilters
+        showSearch={admin}
+        query={query}
+        label={label}
+        from={from}
+        to={to}
+        onQuery={resetPage(setQuery)}
+        onLabel={resetPage(setLabel)}
+        onFrom={resetPage(setFrom)}
+        onTo={resetPage(setTo)}
+        onClear={() => {
+          setQuery("");
+          setLabel("");
+          setFrom("");
+          setTo("");
+          setPage(1);
+        }}
+        dateError={dateError}
+      />
+      <Card className="table-card">
         {loading ? (
           <Loading />
         ) : error ? (
           <ErrorState message={error} retry={reload} />
-        ) : !records.length || dateError ? (
-          <EmptyState
-            title={data?.length ? "Không có bản ghi phù hợp" : "Chưa có lượt chẩn đoán nào"}
-            description={data?.length ? "Thử thay đổi bộ lọc." : undefined}
-          />
+        ) : !shown.length ? (
+          data?.length ? (
+            <div className="table-card__body">
+              <NoMatchSkeleton showPatient={admin} />
+            </div>
+          ) : (
+            <EmptyState
+              title="Chưa có lượt chẩn đoán nào"
+              description="Các lượt chẩn đoán của bạn sẽ hiện ở đây."
+            />
+          )
         ) : (
-          <HistoryTable
-            records={records.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)}
-            showPatient={admin}
-            onDelete={
-              manage && admin
-                ? (record) => {
-                    setRemove(record);
-                    setMutationError("");
-                  }
-                : undefined
-            }
-          />
-        )}
-        <div className="table-footer">
-          <span>
-            {records.length} bản ghi · Trang {currentPage}/{pages}
-          </span>
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              disabled={currentPage <= 1}
-              onClick={() => setPage(currentPage - 1)}
-            >
-              Trước
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={currentPage >= pages}
-              onClick={() => setPage(currentPage + 1)}
-            >
-              Sau
-            </Button>
+          <div className="table-card__body">
+            <HistoryTable
+              records={shown}
+              showPatient={admin}
+              onDelete={
+                manage && admin
+                  ? (record) => {
+                      setRemove(record);
+                      setMutationError("");
+                    }
+                  : undefined
+              }
+            />
           </div>
-        </div>
+        )}
+        <Pagination
+          page={currentPage}
+          pages={pages}
+          total={dateError ? 0 : records.length}
+          onPage={setPage}
+        />
       </Card>
       <Modal
         open={!!remove}
@@ -162,7 +162,7 @@ export function PredictionHistory({ manage = false }: { manage?: boolean }) {
                 try {
                   await predictionService.remove(remove.id);
                   setRemove(null);
-                  setMessage("Đã xoá lượt chẩn đoán.");
+                  toast({ tone: "success", message: "Đã xoá lượt chẩn đoán khỏi lịch sử." });
                   void reload();
                 } catch (reason) {
                   setMutationError(errorMessage(reason));
@@ -176,6 +176,6 @@ export function PredictionHistory({ manage = false }: { manage?: boolean }) {
           </div>
         </div>
       </Modal>
-    </>
+    </div>
   );
 }
